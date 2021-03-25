@@ -9,8 +9,11 @@ properties
     deg % degree of each cell (number of neighbors)
     maxdeg % maximal degree of all cells in the mesh
     resvind % reservoir index
-    nodeind % which node index
+    % for a mesh cell on a node, which node it corresponds to
+    nodeind
     % 1st column: which network edge, 2nd col: which mesh cell index along that edge
+    % with the network edge is listed as 0 that means the mesh cell is
+    % located on a node
     edgeind 
 end
 
