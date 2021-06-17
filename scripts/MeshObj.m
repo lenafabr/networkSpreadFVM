@@ -1,20 +1,16 @@
 classdef MeshObj < handle
     % object defining a FVM mesh
 properties                               
-    ncell % number of mesh cells
-    dim % dimensionality of network
-    bounds % list of neighbor cells bordering each mesh cell 
-    len % total length of tubule associated with this mesh cell
-    pos % position of the center of each cell
-    deg % degree of each cell (number of neighbors)
-    maxdeg % maximal degree of all cells in the mesh
+    ncell
+    dim
+    bounds    
+    len
+    pos
+    deg
+    maxdeg
     resvind % reservoir index
-    % for a mesh cell on a node, which node it corresponds to
-    nodeind
-    % 1st column: which network edge, 2nd col: which mesh cell index along that edge
-    % with the network edge is listed as 0 that means the mesh cell is
-    % located on a node
-    edgeind 
+    nodeind % which node index
+    edgeind % which edge index
 end
 
 methods

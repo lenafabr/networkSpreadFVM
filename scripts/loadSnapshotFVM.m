@@ -50,16 +50,10 @@ function [fields,snaptimes,vels,CL ] = loadSnapshotFVM(filename)
    end
    
    % create a "Cell object" structure containing some minimal fields
-   % to be used in analyzing snapshots as if they were experimental data
    if (nargout>3)
-       if (~exist('CellObjPA','class'))
-           warning('Cell object class not defined.')
-           CL = NaN;
-       else
-           CL = CellObjPA(filename);
-           CL.NFrame = nsnap;
-           CL.dt = snaptimes(2)-snaptimes(1);
-           CL.startPA = 1;
-       end
+       CL = CellObjPA(filename);       
+       CL.NFrame = nsnap;       
+       CL.dt = snaptimes(2)-snaptimes(1);
+       CL.startPA = 1;
    end
 end

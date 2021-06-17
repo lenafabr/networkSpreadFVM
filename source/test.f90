@@ -1,0 +1,17 @@
+PROGRAM MAIN
+  ! minimalist fortran syntax testing
+  USE GENUTIL
+  IMPLICIT NONE
+
+  CHARACTER(LEN=100) :: STR
+  INTEGER :: INT
+  INTEGER :: LIST(10), ARRAY(3,3), LIST2(10)
+  LOGICAL :: INDS(10)
+  
+  LIST = (/(INT,INT=1,10)/)
+  LIST2 = LIST*2
+
+  LIST(LIST2>8) = 5
+  
+  PRINT*, LIST
+END PROGRAM MAIN
