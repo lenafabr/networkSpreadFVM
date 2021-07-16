@@ -575,7 +575,7 @@ CONTAINS
            
            ! loop through remaining items looking for reservoir label or permeability label          
            DO I = 1,NITEMS-2-NETP%DIM
-              CALL READA(LBL)              
+              CALL READA(LBL)
               IF (LBL(1:1).EQ.'R'.AND.DORESERVOIRS) THEN ! attach reservoir label
                  READ(LBL(2:100),*) NETP%NODERESV(NID)
               ELSE IF(LBL(1:1).EQ.'P') THEN ! set node as permeable for a given field
@@ -737,7 +737,7 @@ CONTAINS
         NETP%FIXEDGEVEL(FIXEDGEVEL(CC)) = .TRUE.
         NETP%FIXEDGEVELVAL(FIXEDGEVEL(CC)) = FIXEDGEVELVAL(CC)
     ENDDO
-     
+    
   END SUBROUTINE NETWORKFROMFILE
 
   SUBROUTINE OUTPUTNETWORK(NETP,NETOUTFILE,APPEND,NODEVAL,EDGEVAL)

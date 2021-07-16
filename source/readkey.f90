@@ -52,6 +52,10 @@ SUBROUTINE READKEY
   NETOUTFILE='*.netout.out' ! File for outputting intermediate network structure
   CONTFILE = '*.cont.out' ! File containing info on contractions
 
+  ! snapshots always include one at 0 time
+  LOGSNAPSHOT = .FALSE. ! logarithmic spacing of snapshots?
+  NSNAPSHOT = 0 ! number of snapshots to use with logarithmic spacing
+  
   OUTPUTEVERY = 1D3 ! output flux every so many steps
   ! output flux more often at the start
   OUTPUTEVERYSTART = 1D1
@@ -434,7 +438,12 @@ SUBROUTINE READKEY
         CASE('RUNSPEED')
            CALL READF(RUNSPEED)        
         CASE('SNAPSHOTFILE')
-           CALL READA (SNAPSHOTFILE)
+           CALL READA(SNAPSHOTFILE)
+        CASE('SNAPSHOTLOG')
+           ! logarithmic spacing of snapshots
+           DUMPSNAPSHOTS = .TRUE.
+           LOGSNAPSHOT = .TRUE.
+           CALL READI(NSNAPSHOT)
         CASE('SNAPSHOTVEL')
            IF (NITEMS.GT.1) THEN
               CALL READI(SNAPSHOTVEL)
@@ -604,7 +613,11 @@ SUBROUTINE READKEY
   print*, 'CONTSPEED, CONTFLOW, OPENRATE:', CONTSPEED, CONTFLOW, OPENRATE
   print*, 'DCOEFF:', dcoeff
   IF (DUMPSNAPSHOTS) THEN
-     PRINT*, 'Dumping snapshot every', SNAPSHOTEVERY,'steps. In file:', TRIM(ADJUSTL(SNAPSHOTFILE))
+     IF (LOGSNAPSHOT) THEN
+        PRINT*, 'Dumping snapshots logarithmically. Total number ', NSNAPSHOT,'.  In file: ', TRIM(ADJUSTL(SNAPSHOTFILE))
+     ELSE
+        PRINT*, 'Dumping snapshot every', SNAPSHOTEVERY,'steps. In file:', TRIM(ADJUSTL(SNAPSHOTFILE))
+     ENDIF
   ENDIF    
   print*, '----------------------------------------------------'
 

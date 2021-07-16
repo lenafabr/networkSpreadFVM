@@ -544,7 +544,7 @@ CONTAINS
     ENDDO
                 
     ! Set up permeable cells (on permeable network nodes)
-    DSP%NPERM = NPERM
+    DSP%NPERM = COUNT(NETP%ISPERM)
     DSP%CEXT = CEXT(1:DSP%NFIELD)
 
     IF (PERMFROMFILE) THEN       
@@ -559,9 +559,7 @@ CONTAINS
         CALL RANDSELECT_INT(NODELIST(1:NODEAVAIL),NPERM,.FALSE.,PERMNODES(1:NPERM),TMP)
           PRINT*, NPERM, ' permeable nodes:', PERMNODES(1:NPERM)
     ENDIF
-    
-    ! Only track flux from permeable nodes if there are some
-    TRACKFLUXPERM = TRACKFLUXPERM.AND.(NPERM.GT.0)
+        
     
     DO CT = 1,NPERM
        NC = PERMNODES(CT)
@@ -597,6 +595,9 @@ CONTAINS
        ENDIF
     ENDDO
 
+    ! Only track flux from permeable nodes if there are some
+    TRACKFLUXPERM = TRACKFLUXPERM.AND.(NPERM.GT.0)
+    
      IF (PERMNEARNODEDIST.GT.0) THEN
        ! make permeable all cells whose centers are near enough to fixed nodes
        DO FC = 1,DSP%NFIELD

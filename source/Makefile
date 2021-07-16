@@ -49,5 +49,5 @@ genutil.o: mt19937.o
 networkutil.o: keys.o genutil.o
 meshutil.o: networkutil.o
 dynsysutil.o: meshutil.o keys.o
-fvmdynamics.o: dynsysutil.o networkutil.o nodecontractutil.o
+fvmdynamics.o: dynsysutil.o networkutil.o nodecontractutil.o keys.o
 nodecontractutil.o: meshutil.o dynsysutil.o networkutil.o flowutil.o

@@ -14,6 +14,9 @@ MODULE KEYS
   LOGICAL :: DUMPSNAPSHOTS, RESTART, APPENDSNAPSHOTS
   INTEGER :: SNAPSHOTEVERY
   INTEGER :: PRINTEVERY, OUTPUTEVERY, OUTPUTEVERYSWITCH, OUTPUTEVERYSTART
+  ! logarithmic spacing of snapshots?
+  LOGICAL :: LOGSNAPSHOT
+  INTEGER :: NSNAPSHOT ! how many snapshots to use with logarithmic spacing
   
   ! ------------
   ! network geometry and setup

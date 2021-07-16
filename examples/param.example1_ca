@@ -48,6 +48,7 @@ STARTEDGES -2
 # initial concentrations of (1) free calcium and (2) total protein
 # these are linear concentrations
 # (eg: mM concentration * pi*a^2, where a is the tubule radius)
+# ER radius is approximately 0.05um
 STARTCONC 0.007854D0 0.15708D0
 
 # -------------
