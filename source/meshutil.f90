@@ -16,7 +16,7 @@ MODULE MESHUTIL
      ! for non-reservoir cell, LEN and VOL should be same
      ! for a reservoir cell, this is the volume of the cell divided by pi a^2
      ! LENPM: length to the center of each adjacent cell (h_plus, h_minus in the math notes motation)
-     DOUBLE PRECISION, POINTER :: POS(:,:), LEN(:), LENPM(:,:), VOL(:)
+     DOUBLE PRECISION, POINTER :: POS(:,:), LEN(:), LENPM(:,:), VOL(:), SA(:)
      ! number of neighbors for each cell
      INTEGER, POINTER :: DEG(:)
      ! for each edge (boundary) of the cell, list the type of boundary
@@ -224,6 +224,8 @@ CONTAINS
 
        ! volume of reservoir (in terms of edge length; this is really V/(pi a^2)
        MESHP%VOL(CT) = NETP%RESVVOL(RC)
+       ! surface area of reservoir (in terms of edge length; this is really V/(2*pi*a)
+       MESHP%SA(CT) = NETP%RESVSA(RC)
        
        ! number of connected cells
        D1 = NETP%RESVNNODE(RC)
@@ -244,6 +246,7 @@ CONTAINS
        MESHP%POS(CT,:) = NETP%NODEPOS(NC,:)
        MESHP%LEN(CT) = NODECELLLEN(NC)
        MESHP%VOL(CT) = MESHP%LEN(CT)
+       MESHP%SA(CT) = MESHP%LEN(CT)
        
        ! Mapping from mesh to network indices
        MESHP%CELLTYPE(CT) = 0 ! this is a cell on a node
@@ -272,6 +275,7 @@ CONTAINS
                & (CX1+((CC-1) + 0.5D0)*EDGECELLLEN(EC))*NETP%EDGEDIR(EC,:)
           MESHP%LEN(CT) = EDGECELLLEN(EC)
           MESHP%VOL(CT) = MESHP%LEN(CT)
+          MESHP%SA(CT) = MESHP%LEN(CT)
           
           ! distance to center of neighbor cell
          ! MESHP%LENPM(CT,1:2) = EDGECELLLEN(EC)
@@ -558,7 +562,7 @@ CONTAINS
     MESHP%MAXDEG = MAXDEG
     
     ALLOCATE(MESHP%POS(NCELLTOT,DIM), MESHP%LEN(NCELLTOT), MESHP%VOL(NCELLTOT),&
-         & MESHP%LENPM(NCELLTOT,MAXDEG))
+         & MESHP%LENPM(NCELLTOT,MAXDEG), MESHP%SA(NCELLTOT))
     ALLOCATE(MESHP%DEG(NCELLTOT),MESHP%BOUNDS(NCELLTOT,MAXDEG))
     ALLOCATE(MESHP%CELLTYPE(NCELLTOT),MESHP%NODEIND(NCELLTOT), MESHP%EDGEIND(NCELLTOT,2), MESHP%TERMNODE(NCELLTOT,MAXDEG))
     ALLOCATE(MESHP%BOUNDDIR(NCELLTOT,MAXDEG), MESHP%BOUNDEDGE(NCELLTOT,MAXDEG))
@@ -577,7 +581,7 @@ CONTAINS
     IMPLICIT NONE
     TYPE(MESH), POINTER :: MESHP
     
-    DEALLOCATE(MESHP%POS, MESHP%LEN, MESHP%LENPM, MESHP%VOL)
+    DEALLOCATE(MESHP%POS, MESHP%LEN, MESHP%LENPM, MESHP%VOL, MESHP%SA)
     DEALLOCATE(MESHP%DEG,MESHP%BOUNDS)
     DEALLOCATE(MESHP%CELLTYPE,MESHP%NODEIND, MESHP%EDGEIND)
     DEALLOCATE(MESHP%TERMNODE, MESHP%BOUNDDIR, MESHP%BOUNDEDGE)

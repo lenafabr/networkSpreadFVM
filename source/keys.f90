@@ -94,8 +94,8 @@ MODULE KEYS
   
   
   ! Reservoirs
-  INTEGER, PARAMETER :: MAXNRESV = 10
-  DOUBLE PRECISION :: RESVVOL(MAXNRESV)
+  INTEGER, PARAMETER :: MAXNRESV = 100
+  DOUBLE PRECISION :: RESVVOL(MAXNRESV), RESVSA(MAXNRESV)
   LOGICAL :: RESVMIX(MAXNRESV), DORESERVOIRS
   CHARACTER(LEN=100) :: RESVFILE
 
@@ -109,6 +109,8 @@ MODULE KEYS
   ! permeable nodes selected randomly, or read in from file
   LOGICAL :: RANDPERMNODES, PERMFROMFILE
   DOUBLE PRECISION:: PERMNEARNODEDIST
+  ! permeability parameter supplied is actually a prefactor multiplied by mesh length and species diffusivity?
+  LOGICAL :: USEPERMPREFACTOR
   
   ! start with fixed conc on network (normalize to 1 if <0)
   DOUBLE PRECISION :: STARTCONC(maxnfield)
