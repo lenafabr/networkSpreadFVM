@@ -110,8 +110,9 @@ SUBROUTINE READKEY
   ! Start with equilibrated concentrations?
   STARTEQUIL = 0
   
-  ! reservoir volumes
+  ! reservoir volumes and surface areas
   RESVVOL= 1D0
+  RESVSA = 1D0
   ! are reservoirs well-mixed?
   RESVMIX = .TRUE.
   DORESERVOIRS = .FALSE.
@@ -129,6 +130,8 @@ SUBROUTINE READKEY
   TRACKFLUXPERM = .TRUE.
   ! make all cells within a certain radius of a permeable node also permeable
   PERMNEARNODEDIST = -1D0
+  ! permeability supplied is actually prefactor to be multiplied by cell length and diffusivity
+  USEPERMPREFACTOR = .TRUE.
   
   ! number of fields
   NFIELD = 1
@@ -427,7 +430,8 @@ SUBROUTINE READKEY
               PRINT*, 'ERROR: reservoir index is too large in readkey. Skipping.'
            ELSE
               CALL READF(RESVVOL(RC))
-              IF (NITEMS.GT.3) CALL READO(RESVMIX(RC))
+              CALL READF(RESVSA(RC))
+              IF (NITEMS.GT.4) CALL READO(RESVMIX(RC))
            ENDIF
         CASE('RNGSEED')
            CALL READI(RNGSEED)
@@ -497,6 +501,12 @@ SUBROUTINE READKEY
               CALL READO(TRACKFLUXPERM)
            ELSE
               TRACKFLUXPERM = .TRUE.
+           ENDIF
+        CASE('USEPERMREFACTOR')
+           IF (NITEMS.GT.1) THEN
+              CALL READO(USEPERMPREFACTOR)
+           ELSE
+              USEPERMPREFACTOR = .TRUE.
            ENDIF
         CASE('VELCONTROL')
            CALL READA(VELCONTROL, CASESET=1)
