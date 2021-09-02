@@ -98,6 +98,7 @@ MODULE KEYS
   DOUBLE PRECISION :: RESVVOL(MAXNRESV), RESVSA(MAXNRESV)
   LOGICAL :: RESVMIX(MAXNRESV), DORESERVOIRS
   CHARACTER(LEN=100) :: RESVFILE
+  LOGICAL :: ALLOWFIXEDRESV
 
   ! permeability
   ! permeability for each field and external concentrations

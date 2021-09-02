@@ -122,7 +122,9 @@ SUBROUTINE READKEY
   DORESERVOIRS = .FALSE.
   ! file to output reservoir data
   RESVFILE = '*.resv.out'
-
+  ! allow fixing of nodes attached to reservoirs
+  ALLOWFIXEDRESV = .FALSE.
+  
   ! permeability of permeable nodes (units of length per time)
   PERMEABILITY =0D0
   NPERM = 0 ! number of permeable nodes
@@ -260,7 +262,13 @@ SUBROUTINE READKEY
            ENDIF
            CALL READI(ACTNODES(NACT))
            CALL READF(ACTRATE(NACT))
-           CALL READF(ACTNEARNODEDIST(nact))        
+           CALL READF(ACTNEARNODEDIST(nact))
+        CASE('ALLOWFIXEDRESV')
+           IF (NITEMS.GT.1) THEN
+              CALL READO(ALLOWFIXEDRESV)
+           ELSE
+              ALLOWFIXEDRESV = .TRUE.
+           ENDIF
         CASE('CEXT')
            DO I = 1,MIN(MAXNFIELD,NITEMS-1)
               CALL READF(CEXT(I))

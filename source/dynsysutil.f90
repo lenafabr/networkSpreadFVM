@@ -361,7 +361,7 @@ CONTAINS
          & FIXEDGEVEL,FIXEDGEVELVAL,NFIXEDGEVEL,&
          & CEXT, NPERM, PERMEABILITY, TRACKFLUXPERM, PERMNODES, PERMFROMFILE, &
          & RANDPERMNODES, USEPERMPREFACTOR, FIXNEARNODEDIST, NACT, ACTRATE, ACTNODES,&
-         & ACTNEARNODEDIST, DEPRATE, PERMNEARNODEDIST, FIXRECTANGLE
+         & ACTNEARNODEDIST, DEPRATE, PERMNEARNODEDIST, FIXRECTANGLE, ALLOWFIXEDRESV
     USE NETWORKUTIL, ONLY : NETWORK
     USE GENUTIL, ONLY : RANDSELECT_INT
     IMPLICIT NONE
@@ -380,17 +380,24 @@ CONTAINS
        DSP%DOACTIVATION = .FALSE.
     ENDIF
     
-    ! list of nodes not attached to reservoirs
-    CT = 0
-    DO NC = 1,NETP%NNODE
-       ALLNODELIST(NC) = NC; ! all nodes
-       IF (NETP%NODERESV(NC).EQ.0) THEN
-          CT = CT+1
-          NODELIST(CT) = NC ! only those nodes not attached to reservoirs
-       ENDIF       
-    ENDDO
-    NODEAVAIL = CT    
-    
+    IF (ALLOWFIXEDRESV) THEN
+       DO NC = 1,NETP%NNODE
+          NODELIST(NC) = NC
+       ENDDO
+       NODEAVAIL = NETP%NNODE       
+    ELSE ! fixed nodes cannot be attached to reservoirs
+       ! list of nodes not attached to reservoirs
+       CT = 0
+       DO NC = 1,NETP%NNODE
+          ALLNODELIST(NC) = NC; ! all nodes
+          IF (NETP%NODERESV(NC).EQ.0) THEN
+             CT = CT+1
+             NODELIST(CT) = NC ! only those nodes not attached to reservoirs
+          ENDIF
+       ENDDO
+       NODEAVAIL = CT
+    ENDIF    
+ 
     IF (.NOT.DSP%ARRAYSET) THEN
        PRINT*, 'ERROR IN SETPARAMSDYNSYS: dynamic system not yet allocated'
        STOP 1
