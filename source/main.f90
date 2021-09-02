@@ -29,7 +29,7 @@ CONTAINS
          & MAXSTARTEDGE, STARTNODERAD, VELCONTROL,&
          & RESVVOL, RESVSA, RESVMIX, STARTCONC, startequil, NFIELD, NCONT, &
          & STARTRATE, STOPRATE, RUNSPEED, RANDFIXNODES, FIXVALS, FIXNODES, NFIX,&
-         & NSTARTPOS,STARTPOS
+         & NSTARTPOS,STARTPOS, MAXNRESV
     USE NETWORKUTIL, ONLY : NETWORKFROMFILE!, SETUPFIXNODES
     USE MESHUTIL, ONLY : MESH, SETUPNETWORKMESH, CLEANUPMESH, OUTPUTMESH
     USE DYNSYSUTIL, ONLY : DYNSYSTEM, SETUPDYNSYS, SETPARAMDYNSYS, &
@@ -58,9 +58,15 @@ CONTAINS
     CALL NETWORKFROMFILE(NETP,NETFILE)    
 
      ! set up reservoir volumes, external concentration
-     DO RC = 1,NETP%NRESV
-        NETP%RESVVOL(RC) = RESVVOL(RC)
-        NETP%RESVSA(RC) = RESVSA(RC)
+    DO RC = 1,NETP%NRESV
+       IF (RC.GT.MAXNRESV) THEN
+          PRINT*, 'ERROR: number of reservoirs in network structure &
+&          exceeds max allowed number. Increase MAXNRESV in keywords.f90', rc, maxnresv
+          STOP 1
+       ENDIF
+       
+       NETP%RESVVOL(RC) = RESVVOL(RC)
+       NETP%RESVSA(RC) = RESVSA(RC)
        NETP%RESVMIX(RC) = RESVMIX(RC)
     ENDDO
      

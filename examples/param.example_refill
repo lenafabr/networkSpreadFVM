@@ -1,0 +1,63 @@
+# parameter file for calculating first passage times on a network
+ACTION rundynamics
+# instant switching of random velocities
+VELCONTROL randvelswitch
+
+# set random number generator by system time
+RNGSEED -2
+
+# network structure stored in this file
+NETFILE circlenuchexresv.net 
+NETWORKDIM 2
+
+# output flux more often at the start (until timepoint 1d4)
+OUTPUTEVERYSTART 5D4 10
+OUTFILE *.out 100
+
+# fix edge velocity
+STOPRATE 0.200000
+RUNSPEED 0D0
+
+# file for outputting mesh structure
+MESHFILE *.mesh.txt
+
+# meshing parametes
+MESHSIZE 0.2D0
+
+# dynamics run parameters
+# how many steps to run
+NSTEP 5D6
+# timestep size
+DELT 1D-5
+# how often to dump snapshots and in what file
+SNAPSHOTS 2D4 *.snap.txt
+#SNAPSHOTLOG 10
+SNAPSHOTFILE *.snap.txt
+
+PRINTEVERY 5D3
+
+# start uniformly distributed on network
+STARTEDGES -2
+STARTCONC 0D0 0.15708D0
+
+DOBUFFER T
+FASTEQUIL T
+
+#Reservoir info
+DORESERVOIRS T
+# Reservoir volume in units of length, actually V/(pi a^2)
+# 5e3 is for a 15um-diam nucleus with single sheet 60nm high, tube radius 50nm
+RESVINFO 1 5D3
+
+# fixed nodes
+# ignore the node index here. Fixed nodes will be read in from file
+# This says what to fix for the concentration of nodes in contact with extracellular environment
+#FIXNODE 1 1 0.007854D0
+#FIXNODEFROMNETFILE T
+
+# random fixed nodes
+RANDFIXNODES 1 10 0.007854D0
+OUTPUTTOTFLUXONLY T
+
+DCOEFF 27.55D0 2.755D0
+KDEQUIL 2.5e-3
