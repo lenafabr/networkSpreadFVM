@@ -369,7 +369,7 @@ CONTAINS
     TYPE(NETWORK), POINTER :: NETP
     INTEGER :: NFIELD
     TYPE(MESH), POINTER :: MESHP
-    INTEGER :: NC, FC, CC, CT, CT2, CC2, EC
+    INTEGER :: NC, FC, CC, CT, CT2, CC2, EC, RC
     INTEGER :: NODELIST(netp%NNODE), TMP(netp%NNODE), ALLNODELIST(NETP%NNODE)
     INTEGER :: NODEAVAIL
     DOUBLE PRECISION :: DIST, MINX, MINY, MAXX, MAXY, POS(NETP%DIM)
@@ -456,13 +456,13 @@ CONTAINS
           CALL RANDSELECT_INT(NODELIST(1:NODEAVAIL),NFIX(FC),.FALSE.,FIXNODES(1:NFIX(FC),FC),TMP)
           PRINT*, 'Field ', FC, NFIX(FC), ' fixed nodes:', FIXNODES(1:NFIX(FC),FC)
        ENDDO
-    ENDIF        
+    ENDIF
 
     ! fix the cells corresponding to the fixed network nodes
     DO CC = 1,MESHP%NCELL
        IF (MESHP%CELLTYPE(CC).EQ.0) THEN
           ! this is a nodal cell
-          NC = MESHP%NODEIND(CC)
+          NC = MESHP%NODEIND(CC)          
           DO FC = 1,DSP%NFIELD
              DO CT = 1,NFIX(FC)
                 IF (FIXNODES(CT,FC).EQ.NC) THEN
@@ -472,7 +472,7 @@ CONTAINS
                 ENDIF
              ENDDO
           ENDDO
-       ELSE
+       ELSEIF (MESHP%CELLTYPE(CC).EQ.1) THEN
           ! this is an edge cell
           ! if it hits a fixed terminal node, fix its value instead
           ! value fixed to that of LAST fixed terminal node
@@ -491,9 +491,33 @@ CONTAINS
                 ENDIF
              ENDDO
           ENDDO
+       ELSEIF (MESHP%CELLTYPE(CC).EQ.2) THEN
+
+          IF (.NOT.ALLOWFIXEDRESV) THEN
+             PRINT*, 'ERROR IN SETTING UP FIXED NODES: reservoir fixed nodes not allowed'
+             STOP 1
+          ENDIF
+          
+          ! reservoir cell, fix if any attached node is in the fix list
+          Rc = MESHP%RESVIND(CC)          
+          DO FC = 1,DSP%NFIELD
+             DO CT= 1,NETP%RESVNNODE(RC)
+                NC = NETP%RESVNODES(RC,CT)
+                
+                DO CT2 = 1,NFIX(FC)
+                   IF (FIXNODES(CT2,FC).EQ.NC) THEN
+                      ! set to first fixed value among attached nodes
+                      DSP%ISFIXED(CC,FC)=.TRUE.
+                      DSP%FIXVALS(CC,FC) = FIXVALS(CT2,FC)
+                      EXIT
+                   ENDIF
+                ENDDO
+                
+             ENDDO
+          ENDDO
        ENDIF
     ENDDO
-    
+
     IF (FIXNEARNODEDIST.GT.0) THEN
        ! fix all cells whose centers are near enough to fixed nodes
        DO FC = 1,DSP%NFIELD
