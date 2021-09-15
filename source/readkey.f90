@@ -440,6 +440,7 @@ SUBROUTINE READKEY
            CALL READI(RC)
            IF (RC.GT.MAXNRESV) THEN
               PRINT*, 'ERROR: reservoir index is too large in readkey. Skipping.'
+              STOP 1
            ELSEIF (RC.LE.0) THEN
               ! assume all reservoirs have same parameters
               CALL READF(RESVVOL(1))
