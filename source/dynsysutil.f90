@@ -492,11 +492,7 @@ CONTAINS
              ENDDO
           ENDDO
        ELSEIF (MESHP%CELLTYPE(CC).EQ.2) THEN
-
-          IF (.NOT.ALLOWFIXEDRESV) THEN
-             PRINT*, 'ERROR IN SETTING UP FIXED NODES: reservoir fixed nodes not allowed'
-             STOP 1
-          ENDIF
+         
           
           ! reservoir cell, fix if any attached node is in the fix list
           Rc = MESHP%RESVIND(CC)          
@@ -506,6 +502,11 @@ CONTAINS
                 
                 DO CT2 = 1,NFIX(FC)
                    IF (FIXNODES(CT2,FC).EQ.NC) THEN
+                      IF (.NOT.ALLOWFIXEDRESV) THEN
+                         PRINT*, 'ERROR IN SETTING UP FIXED NODES: reservoir fixed nodes not allowed'
+                         STOP 1
+                      ENDIF
+                      
                       ! set to first fixed value among attached nodes
                       DSP%ISFIXED(CC,FC)=.TRUE.
                       DSP%FIXVALS(CC,FC) = FIXVALS(CT2,FC)
@@ -527,6 +528,11 @@ CONTAINS
              DO CC = 1,MESHP%NCELL
                 DIST = SQRT(SUM((MESHP%POS(CC,:)-NETP%NODEPOS(NC,:))**2))
                 IF (DIST.LT.FIXNEARNODEDIST) THEN
+                   IF (.NOT.ALLOWFIXEDRESV) THEN
+                      PRINT*, 'ERROR IN SETTING UP FIXED NODES: reservoir fixed nodes not allowed'
+                      STOP 1
+                   ENDIF
+                   
                    DSP%ISFIXED(CC,FC) = .TRUE.
                    DSP%FIXVALS(CC,FC) = FIXVALS(CT,FC)
                 ENDIF

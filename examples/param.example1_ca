@@ -72,7 +72,7 @@ DCOEFF 27.55D0 2.755D0
 DORESERVOIRS T
 # Reservoir volume in units of length, actually V/(pi a^2)
 # 5e3 is for a 15um-diam nucleus with single sheet 60nm high, tube radius 50nm
-RESVINFO 1 5D3
+RESVINFO 1 5D3 0D0
 
 # ---------------------
 # permeability: estimated as D/dmem*A/(pi a^2)
@@ -86,3 +86,6 @@ PERMFROMFILE
 PERMNEARNODEDIST 3D0
 # external concentration of free calcium and protein (linear, conc*pi*a^2)
 CEXT  0D0 0D0
+
+# use absolute permeability, regardless of mesh size
+USEPERMPREFACTOR FALSE
