@@ -114,7 +114,9 @@ MODULE KEYS
   LOGICAL :: USEPERMPREFACTOR
   
   ! start with fixed conc on network (normalize to 1 if <0)
-  DOUBLE PRECISION :: STARTCONC(maxnfield)
+  ! optionally, set a background concentration (separate from starting concs around a node)
+  DOUBLE PRECISION :: STARTCONC(maxnfield), BACKGROUNDCONC(MAXNFIELD)
+  LOGICAL :: SETBACKGROUNDCONC ! will we be using the background conc?
   INTEGER :: STARTEQUIL
 
   ! Evolve buffer proteins? Rapidly equilibrating proteins?
