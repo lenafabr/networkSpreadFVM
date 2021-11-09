@@ -113,6 +113,9 @@ SUBROUTINE READKEY
   STARTCONC = 1D0
   ! Start with equilibrated concentrations?
   STARTEQUIL = 0
+  ! Background concentration specified?
+  SETBACKGROUNDCONC = .FALSE.
+  BACKGROUNDCONC = 0D0
   
   ! reservoir volumes and surface areas
   RESVVOL= 1D0
@@ -125,7 +128,9 @@ SUBROUTINE READKEY
   ! allow fixing of nodes attached to reservoirs
   ALLOWFIXEDRESV = .FALSE.
   
-  ! permeability of permeable nodes (units of length per time)
+  ! permeability of permeable nodes (units of length per time, unless usepermprefactor is true)
+  ! if usepermprefactor: this parameter is multiplied
+  ! by mesh cell length and diffusivity to give your permeability
   PERMEABILITY =0D0
   NPERM = 0 ! number of permeable nodes
   RANDPERMNODES = .FALSE. 
@@ -269,6 +274,11 @@ SUBROUTINE READKEY
            ELSE
               ALLOWFIXEDRESV = .TRUE.
            ENDIF
+        CASE('BACKGROUNDCONC')
+           SETBACKGROUNDCONC = .TRUE.
+           DO I = 1,NITEMS-1
+              CALL READF(BACKGROUNDCONC(I))
+           ENDDO           
         CASE('CEXT')
            DO I = 1,MIN(MAXNFIELD,NITEMS-1)
               CALL READF(CEXT(I))
@@ -440,6 +450,7 @@ SUBROUTINE READKEY
            CALL READI(RC)
            IF (RC.GT.MAXNRESV) THEN
               PRINT*, 'ERROR: reservoir index is too large in readkey. Skipping.'
+              STOP 1
            ELSEIF (RC.LE.0) THEN
               ! assume all reservoirs have same parameters
               CALL READF(RESVVOL(1))
@@ -456,7 +467,7 @@ SUBROUTINE READKEY
         CASE('RNGSEED')
            CALL READI(RNGSEED)
         CASE('RUNSPEED')
-           CALL READF(RUNSPEED)        
+           CALL READF(RUNSPEED)       
         CASE('SNAPSHOTFILE')
            CALL READA(SNAPSHOTFILE)
         CASE('SNAPSHOTLOG')

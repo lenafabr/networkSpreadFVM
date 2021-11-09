@@ -158,7 +158,7 @@ CONTAINS
     
   END SUBROUTINE INITIALIZEFIELDNODES
 
-  SUBROUTINE INITIALIZEFIELDNEARPos(NETP,DSP,STARTPOS,STARTCONC, RAD)
+  SUBROUTINE INITIALIZEFIELDNEARPos(NETP,DSP,STARTPOS,STARTCONC, RAD,BACKGROUNDCONC)
     ! initialize field to a constant nonzero value
     ! on all cells within a particular radius of a set of starting positions
     ! if startconc < 0, normalize to make field integrate to 1
@@ -168,13 +168,21 @@ CONTAINS
     TYPE(DYNSYSTEM), POINTER :: DSP
     DOUBLE PRECISION, INTENT(IN) :: STARTPOS(:,:)    
     DOUBLE PRECISION, INTENT(IN) :: STARTCONC(DSP%NFIELD), RAD
+    DOUBLE PRECISION, INTENT(IN), OPTIONAL :: BACKGROUNDCONC(DSP%NFIELD)
     INTEGER :: NSTARTPOS, FC, NC, CC
     DOUBLE PRECISION :: TOTLEN, DIST2
     LOGICAL :: STARTCELLS(DSP%MESHP%NCELL)
     
+    
     NSTARTPOS = SIZE(STARTPOS,1)
     DSP%FIELDS = 0D0
 
+    IF (PRESENT(BACKGROUNDCONC)) THEN
+       DO FC = 1,DSP%NFIELD
+          DSP%FIELDS(:,FC) = BACKGROUNDCONC(FC)
+       ENDDO
+    ENDIF
+    
     ! IF (ANY(NETP%NODEDEG(STARTNODES).EQ.1)) THEN
     !    PRINT*, 'ERROR IN INITIALIZEFIELDNODES: cannot initialize on terminal nodes'
     !    STOP 1
@@ -492,11 +500,7 @@ CONTAINS
              ENDDO
           ENDDO
        ELSEIF (MESHP%CELLTYPE(CC).EQ.2) THEN
-
-          IF (.NOT.ALLOWFIXEDRESV) THEN
-             PRINT*, 'ERROR IN SETTING UP FIXED NODES: reservoir fixed nodes not allowed'
-             STOP 1
-          ENDIF
+         
           
           ! reservoir cell, fix if any attached node is in the fix list
           Rc = MESHP%RESVIND(CC)          
@@ -506,6 +510,11 @@ CONTAINS
                 
                 DO CT2 = 1,NFIX(FC)
                    IF (FIXNODES(CT2,FC).EQ.NC) THEN
+                      IF (.NOT.ALLOWFIXEDRESV) THEN
+                         PRINT*, 'ERROR IN SETTING UP FIXED NODES: reservoir fixed nodes not allowed'
+                         STOP 1
+                      ENDIF
+                      
                       ! set to first fixed value among attached nodes
                       DSP%ISFIXED(CC,FC)=.TRUE.
                       DSP%FIXVALS(CC,FC) = FIXVALS(CT2,FC)
@@ -527,6 +536,11 @@ CONTAINS
              DO CC = 1,MESHP%NCELL
                 DIST = SQRT(SUM((MESHP%POS(CC,:)-NETP%NODEPOS(NC,:))**2))
                 IF (DIST.LT.FIXNEARNODEDIST) THEN
+                   IF (.NOT.ALLOWFIXEDRESV) THEN
+                      PRINT*, 'ERROR IN SETTING UP FIXED NODES: reservoir fixed nodes not allowed'
+                      STOP 1
+                   ENDIF
+                   
                    DSP%ISFIXED(CC,FC) = .TRUE.
                    DSP%FIXVALS(CC,FC) = FIXVALS(CT,FC)
                 ENDIF
