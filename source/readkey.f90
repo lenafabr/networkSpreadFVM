@@ -278,7 +278,13 @@ SUBROUTINE READKEY
            SETBACKGROUNDCONC = .TRUE.
            DO I = 1,NITEMS-1
               CALL READF(BACKGROUNDCONC(I))
-           ENDDO           
+           ENDDO
+           DO i = 1,MIN(MAXNABSORBER,MAXSTARTNODE)
+               IF(PERMNODES(i).ne.0) THEN
+                  STARTNODES(i) = PERMNODES(i)!set permeable nodes to startnodes if backgorundconc is set
+               ENDIF
+            ENDDO
+
         CASE('CEXT')
            DO I = 1,MIN(MAXNFIELD,NITEMS-1)
               CALL READF(CEXT(I))
