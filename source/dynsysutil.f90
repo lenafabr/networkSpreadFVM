@@ -309,7 +309,7 @@ CONTAINS
     ENDDO
     
     CALL INTEGRATEFIELD(DSP,TMP,TOTLEN,.FALSE.)
-    PRINT*, 'TESTX2:', TMP, TOTLEN
+
   END SUBROUTINE INITIALIZEFIELDEDGES
   
   SUBROUTINE OUTPUTFIELDS(DSP,OUTFILE,INFO,APPEND)
@@ -466,6 +466,7 @@ CONTAINS
        ENDDO
     ENDIF
 
+
     ! fix the cells corresponding to the fixed network nodes
     DO CC = 1,MESHP%NCELL
        IF (MESHP%CELLTYPE(CC).EQ.0) THEN
@@ -507,9 +508,9 @@ CONTAINS
           DO FC = 1,DSP%NFIELD
              DO CT= 1,NETP%RESVNNODE(RC)
                 NC = NETP%RESVNODES(RC,CT)
-                
+
                 DO CT2 = 1,NFIX(FC)
-                   IF (FIXNODES(CT2,FC).EQ.NC) THEN
+                   IF (FIXNODES(CT2,FC).EQ.NC) THEN                     
                       IF (.NOT.ALLOWFIXEDRESV.and.DORESERVOIRS) THEN
                          PRINT*, 'ERROR IN SETTING UP FIXED NODES: reservoir fixed nodes not allowed'
                          STOP 1
@@ -536,9 +537,9 @@ CONTAINS
              DO CC = 1,MESHP%NCELL
                 DIST = SQRT(SUM((MESHP%POS(CC,:)-NETP%NODEPOS(NC,:))**2))
                 IF (DIST.LT.FIXNEARNODEDIST) THEN
-                   IF (.NOT.ALLOWFIXEDRESV.AND.DORESERVOIRS) THEN
-                      PRINT*, 'ERROR IN SETTING UP FIXED NODES: reservoir fixed nodes not allowed'
-                      STOP 1
+                   IF (.NOT.ALLOWFIXEDRESV.AND.DORESERVOIRS.AND.MESHP%CELLTYPE(CC).EQ.2) THEN
+                     PRINT*, 'ERROR IN SETTING UP FIXED NODES: reservoir fixed nodes not allowed'
+                     STOP 1
                    ENDIF
                    
                    DSP%ISFIXED(CC,FC) = .TRUE.
