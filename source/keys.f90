@@ -33,6 +33,9 @@ MODULE KEYS
   DOUBLE PRECISION :: STARTPOS(MAXSTARTNODE,3)
   ! radius for starting around specific nodes
   DOUBLE PRECISION :: STARTNODERAD
+
+  ! set the starting nodes to be the permeable ones
+  LOGICAL :: STARTFROMPERMEABLE
   
   INTEGER, PARAMETER :: MAXNFIELD = 5 ! maximum allowed concentration fields
   LOGICAL :: MOBILEFIELD(MAXNFIELD)

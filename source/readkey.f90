@@ -116,6 +116,8 @@ SUBROUTINE READKEY
   ! Background concentration specified?
   SETBACKGROUNDCONC = .FALSE.
   BACKGROUNDCONC = 0D0
+  ! start from permeable nodes?
+  STARTFROMPERMEABLE = .FALSE.
   
   ! reservoir volumes and surface areas
   RESVVOL= 1D0
@@ -278,13 +280,7 @@ SUBROUTINE READKEY
            SETBACKGROUNDCONC = .TRUE.
            DO I = 1,NITEMS-1
               CALL READF(BACKGROUNDCONC(I))
-           ENDDO
-           DO i = 1,MIN(MAXNABSORBER,MAXSTARTNODE)
-               IF(PERMNODES(i).ne.0) THEN
-                  STARTNODES(i) = PERMNODES(i)!set permeable nodes to startnodes if backgorundconc is set
-               ENDIF
-            ENDDO
-
+           ENDDO          
         CASE('CEXT')
            DO I = 1,MIN(MAXNFIELD,NITEMS-1)
               CALL READF(CEXT(I))
@@ -505,6 +501,12 @@ SUBROUTINE READKEY
            DO FC = 1,MIN(NITEMS-1,MAXNFIELD)
               CALL READF(STARTCONC(FC))
            ENDDO
+        CASE('STARTFROMPERMEABLE')
+           IF (NITEMS.GT.1) THEN
+              CALL READO(STARTFROMPERMEABLE)
+           ELSE           
+              STARTFROMPERMEABLE = .TRUE.
+           ENDIF
         CASE('STARTEQUIL')
            CALL READI(STARTEQUIL)
         CASE('STARTNODERAD')
