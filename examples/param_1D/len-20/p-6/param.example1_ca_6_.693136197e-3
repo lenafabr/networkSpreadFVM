@@ -1,0 +1,91 @@
+# parameter file for calcium release from a network
+ACTION rundynamics
+# instant switching of random velocities (although vel=0 in this example)
+VELCONTROL randvelswitch
+
+# set random number generator by system time and file name 
+RNGSEED -2
+
+# network structure stored in this file
+NETFILE line20.net
+# dimension of the network
+NETWORKDIM 2
+
+
+# Flow velocity on edges
+RUNSPEED 0D0
+# if using non-zero velocities, switch direction at this rate
+STOPRATE 10D0
+
+# file for outputting mesh structure
+MESHFILE *.mesh.txt
+# meshing parameters: this gives the maximal size of a mesh cell
+MESHSIZE 0.2D0
+
+# ----------------------
+# dynamic run and output parameters
+# -----------------------
+# how many steps to run
+NSTEP 1D6
+# timestep size
+DELT 2D-5
+# how often to dump snapshots and in what file
+SNAPSHOTS 5D3 *.snap.txt
+# how often to print output on screen
+PRINTEVERY 1D3
+# output total flux out of network into this file every 20 timesteps.
+OUTFILE *.out 20
+OUTPUTTOTFLUXONLY T
+# output flux more often at the start (until timestep 1d4, output every 2 steps)
+# this is useful for numerical integration because initial flux rises rapidly
+OUTPUTEVERYSTART 1D4 2
+
+# ----------------
+# initial conditions
+# ---------------
+# start uniformly distributed along all network edges
+STARTEDGES -2
+# initial concentrations of (1) free calcium and (2) total protein
+# these are linear concentrations
+# (eg: mM concentration * pi*a^2, where a is the tubule radius)
+# ER radius is approximately 0.05um
+STARTCONC 0.007854D0 .047124000D0
+
+# -------------
+# Buffer binding parameters
+# -------------
+# include binding to buffer proteins?
+DOBUFFER T
+# take the limit of fast binding equilibration?
+FASTEQUIL T
+# equilibrium binding dissociation constant (linear concentration units: mM*pi*a^2)
+KDEQUIL .693136197e-3
+# diffusion coefficient of (1) free calcium (2) buffer protein
+DCOEFF 27.55D0 2.755D0
+
+# ------------
+# reservoirs:
+# -------------
+# include large well-mixed reservoirs in the system?
+# nodes connected to the reservoirs are listed within the network file
+# eg: all nodes marked R1 belong to reservoir 1
+DORESERVOIRS F
+# Reservoir volume in units of length, actually V/(pi a^2)
+# 5e3 is for a 15um-diam nucleus with single sheet 60nm high, tube radius 50nm
+#RESVINFO 1 5D3 0D0
+
+# ---------------------
+# permeability: estimated as D/dmem*A/(pi a^2)
+# where A is the total area of open channels
+# ------------------------
+#have fixed nodes values as (1) free Cal (2) protein buffer
+FIXNODE 1 1 0D0 
+# set fixed nodes from file
+FIXNODEFROMNETFILE
+# make every mesh cell within this distance of the node also permeable
+FIXNEARNODEDIST 3D0
+# external concentration of free calcium and protein (linear, conc*pi*a^2)
+CEXT  0D0 0D0
+
+# use absolute permeability, regardless of mesh size
+USEPERMPREFACTOR FALSE

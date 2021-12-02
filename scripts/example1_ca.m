@@ -1,4 +1,4 @@
-dirname = '~/proj/networkFVMsims/examples/';
+dirname = '~/ER_Ca_rot/networkSpreadFVM-main/examples/';
 
 %% total flux out of holes
 filename = [dirname 'example1_ca.out'];
@@ -21,8 +21,8 @@ scl = 1e-3*6e23/(1e3*1e12)/1e7;
 h0 = plot(tavg0,cumflux0*scl,'r-','LineWidth',3)
 xlabel('time (s)')
 ylabel('cumulative Ca ions released')
+title('1e-3')
 xlim([0,20])
-
 
 % ---------
 %% look at network snapshots over time
