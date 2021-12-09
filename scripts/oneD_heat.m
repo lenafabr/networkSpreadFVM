@@ -58,7 +58,7 @@ for i = 10:2:30
         fluxsim0 = fluxsim; tvals0 = tvals;
         %flux(((i/2)-4),j) = cumflux0(29509)*scl;
         
-        fl = "~/ER_Ca_rot/networkFVMsims_git/examples/oneD_op/plots/time_plts/";
+        fl = "~/ER_Ca_rot/networkSpreadFVM-main/examples/oneD_op/plots/time_plts/";
         f = figure('visible','off');
         
         h0 = plot(tavg0,cumflux0*scl,'r-','LineWidth',3);
