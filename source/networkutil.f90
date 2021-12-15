@@ -402,9 +402,9 @@ CONTAINS
            DO I = 1,NITEMS-1
               CALL READA(LBL)
               IF ((LBL(1:1).EQ.'R').OR.LBL(1:1).EQ.'P'.OR.LBL(1:1).EQ.'F') THEN
-                 IF (NETWORKDIM.LT.0) DIM = NITEMS - 3
+                 IF (NETWORKDIM.LE.0) DIM = NITEMS - 3
               ENDIF
-              IF (LBL(1:1).EQ.'R'.AND.DORESERVOIRS) THEN ! attach reservoir label
+              IF (LBL(1:1).EQ.'R'.AND.DORESERVOIRS) THEN ! attach reservoir label                 
                  READ(LBL(2:100),*) NODERESV
                  IF (NODERESV.GT.MAXRESV) MAXRESV = NODERESV
               ENDIF
@@ -458,6 +458,7 @@ CONTAINS
               CALL READA(LBL)
               IF (LBL(1:1).EQ.'R'.AND.DORESERVOIRS) THEN ! attach reservoir label
                  READ(LBL(2:100),*) NETP%NODERESV(NID)
+                 
               ELSE IF(LBL(1:1).EQ.'P') THEN ! set node as permeable for a given field
                  READ(LBL(2:100),*) FC
                  NETP%ISPERM(NID) = .TRUE.
@@ -600,7 +601,12 @@ CONTAINS
      PRINT*, 'Reservoir nodes:', NETP%NRESV
      DO RC = 1,NETP%NRESV
         PRINT*, RC, NETP%RESVNNODE(RC),NETP%RESVNODES(RC,1:NETP%RESVNNODE(RC))
+        IF (NETP%RESVNNODE(RC).LT.1) THEN
+           PRINT*, 'ERROR: reservoir with no nodes', RC
+           STOP 1
+        ENDIF
      ENDDO
+
      
      DEALLOCATE(EDGELENSET)
      NETP%STRUCTURESET = .TRUE.
