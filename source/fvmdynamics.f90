@@ -473,7 +473,7 @@ CONTAINS
           ENDIF
        ENDDO
 
-       ! Turn off advective and diffusive flux for non-motile fields
+       ! Turn off advective and diffusive flux for non-mobile fields
        DO FC = 1,DSP%NFIELD
           IF (.NOT.DSP%MOBILEFIELD(FC)) THEN
              FLUXDIFF(FC) = 0D0; FLUXADV(FC) = 0D0
@@ -626,18 +626,20 @@ CONTAINS
           DFDT(CC,:) = DFDT(CC,:) - FLUX(CC,:)/MESHP%VOL(CC)          
        ENDIF
        
+       IF (.NOT.DSP%MOBILEFIELD(2)) THEN
+          ! protein not allowed to move
+          DFDT(CC,2) = 0D0
+       END IF
        
        ! get change in free ligand from delta total lig and delta total prot
        LKD = DSP%FIELDS(CC,1) + DSP%KDEQUIL;
        DFDT(CC,1) = (DFDT(CC,1) - DSP%FIELDS(CC,1)*DFDT(CC,2)/LKD)/ &            
             & (1 + DSP%FIELDS(CC,2)*DSP%KDEQUIL/LKD**2)
        
-       ! Turn off advective and diffusive flux for non-motile fields
-       DO FC = 1,DSP%NFIELD
-          IF (.NOT.DSP%MOBILEFIELD(FC)) THEN
-             DFDT(CC,FC) = 0D0
-          ENDIF
-       ENDDO     
+       IF (.NOT.DSP%MOBILEFIELD(1)) THEN
+          ! free ligand not allowed to move
+          DFDT(CC,1) = 0D0
+       ENDIF
             
              
       
