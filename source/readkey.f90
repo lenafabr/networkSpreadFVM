@@ -546,7 +546,7 @@ SUBROUTINE READKEY
            ELSE
               TRACKFLUXPERM = .TRUE.
            ENDIF
-        CASE('USEPERMREFACTOR')
+        CASE('USEPERMPREFACTOR')
            IF (NITEMS.GT.1) THEN
               CALL READO(USEPERMPREFACTOR)
            ELSE
