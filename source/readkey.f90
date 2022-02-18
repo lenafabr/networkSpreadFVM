@@ -129,6 +129,9 @@ SUBROUTINE READKEY
   RESVFILE = '*.resv.out'
   ! allow fixing of nodes attached to reservoirs
   ALLOWFIXEDRESV = .FALSE.
+  ! some specific reservoirs are not allowed to be fixed
+  ! this setting is temporary
+  ALLOWRESVFIX = .TRUE.
   
   ! permeability of permeable nodes (units of length per time, unless usepermprefactor is true)
   ! if usepermprefactor: this parameter is multiplied
@@ -313,7 +316,7 @@ SUBROUTINE READKEY
               CALL READO(DORESERVOIRS)
            ELSE
               DORESERVOIRS = .TRUE.
-           ENDIF
+           ENDIF           
         CASE('OPENRATE')
            CALL READF(OPENRATE)
         CASE('DCOEFF')
@@ -389,6 +392,11 @@ SUBROUTINE READKEY
            CALL READI(NETWORKDIM)
         CASE('NCONT')
            CALL READI(NCONT)
+        CASE('NOFIXRESV')
+           DO FC = 1,NITEMS-1
+              CALL READI(DUMI)
+              IF (DUMI<MAXNRESV) ALLOWRESVFIX(DUMI) = .FALSE.              
+           ENDDO
         CASE('NODEVOL')
            CALL READF(NODEVOL)
         CASE('NPART')
@@ -573,6 +581,8 @@ SUBROUTINE READKEY
      CLOSE(PF)
   ENDDO
 
+  ! do not allow fixing of any reservoirs
+  IF (.NOT.ALLOWFIXEDRESV) ALLOWRESVFIX = .FALSE.
 
   ! -----------------
   ! check validity of some values, raise errors or adjust as necessary
@@ -655,8 +665,10 @@ SUBROUTINE READKEY
         PRINT*, 'Kon, Koff:', KON, KOFF
      ENDIF     
   ENDIF
-  print*, 'CONTSPEED, CONTFLOW, OPENRATE:', CONTSPEED, CONTFLOW, OPENRATE
+  
+ !print*, 'CONTSPEED, CONTFLOW, OPENRATE:', CONTSPEED, CONTFLOW, OPENRATE
   print*, 'DCOEFF:', dcoeff
+  print*, 'MOBILEFIELD:', MOBILEFIELD
   IF (DUMPSNAPSHOTS) THEN
      IF (LOGSNAPSHOT) THEN
         PRINT*, 'Dumping snapshots logarithmically. Total number ', NSNAPSHOT,'.  In file: ', TRIM(ADJUSTL(SNAPSHOTFILE))

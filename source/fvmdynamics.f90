@@ -579,7 +579,7 @@ CONTAINS
           IF (BC.GT.0) THEN
              ! flux across each boundary defined as
              ! D*(w_(j+1)-w_j)/h+
-             ! get diffusive flux of total ligand
+             ! get diffusive flux of TOTAL LIGAND
              FLUXDIFF(1) = FLUXDIFF(1) &
                   & + DSP%DCOEFF(1)*(DSP%FIELDS(BC,1) - DSP%FIELDS(CC,1))/MESHP%LENPM(CC,BCt) &
                   & + DSP%DCOEFF(2)*(BFIELD(BC) - BFIELD(CC))/MESHP%LENPM(CC,BCt)
@@ -595,53 +595,56 @@ CONTAINS
           ! approximate field values on boundary after half a timestep
           ! positive bounddir means + velocities point out from this cell
           BC = MESHP%BOUNDS(CC,BCT) ! boundary cell
-
+          
           IF (BC.GT.0) THEN            
-             ! total ligand
+             ! TOTAL ligand
              ! Weighted average of field on boundary
-             WAVG(1) = (MESHP%LEN(BC)/MESHP%DEG(BC)*CFIELD(CC) &
-                  & + MESHP%LEN(CC)/MESHP%DEG(CC)*CFIELD(BC))/MESHP%LENPM(CC,BCT)
-             WSHIFT(1) = WAVG(1) - DELT/2/MESHP%LENPM(CC,BCT)*DSP%VEL(CC,BCT)*MESHP%BOUNDDIR(CC,BCT)*(CFIELD(BC) - CFIELD(CC))
-             
-             ! total protein
-             WAVG(2) = (MESHP%LEN(BC)/MESHP%DEG(BC)*DSP%FIELDS(CC,2) &
-                  & + MESHP%LEN(CC)/MESHP%DEG(CC)*DSP%FIELDS(BC,2))/MESHP%LENPM(CC,BCT)
-             WSHIFT(2) = WAVG(2) - &
-                  & DELT/2/MESHP%LENPM(CC,BCT)*DSP%VEL(CC,BCT)*MESHP%BOUNDDIR(CC,BCT)&
-                  & *(DSP%FIELDS(BC,2) - DSP%FIELDS(CC,2))  
+             IF (.NOT.DSP%MOBILEFIELD(2)) THEN ! immobile proteins, only free ligand feels flow
+                WAVG(1) = (MESHP%LEN(BC)/MESHP%DEG(BC)*DSP%FIELDS(CC,1) &
+                     & + MESHP%LEN(CC)/MESHP%DEG(CC)*DSP%FIELDS(BC,1))/MESHP%LENPM(CC,BCT)
+                WSHIFT(1) = WAVG(1) - DELT/2/MESHP%LENPM(CC,BCT)*DSP%VEL(CC,BCT)*MESHP%BOUNDDIR(CC,BCT)&
+                     & *(DSP%FIELDS(BC,1) - DSP%FIELDS(CC,1))
+                WAVG(2) =0D0; WSHIFT(2) = 0D0
+             ELSE
+                WAVG(1) = (MESHP%LEN(BC)/MESHP%DEG(BC)*CFIELD(CC) &
+                     & + MESHP%LEN(CC)/MESHP%DEG(CC)*CFIELD(BC))/MESHP%LENPM(CC,BCT)
+                WSHIFT(1) = WAVG(1) - DELT/2/MESHP%LENPM(CC,BCT)*DSP%VEL(CC,BCT)*MESHP%BOUNDDIR(CC,BCT)*(CFIELD(BC) - CFIELD(CC))
 
+                ! total protein
+                WAVG(2) = (MESHP%LEN(BC)/MESHP%DEG(BC)*DSP%FIELDS(CC,2) &
+                     & + MESHP%LEN(CC)/MESHP%DEG(CC)*DSP%FIELDS(BC,2))/MESHP%LENPM(CC,BCT)
+                WSHIFT(2) = WAVG(2) - &
+                     & DELT/2/MESHP%LENPM(CC,BCT)*DSP%VEL(CC,BCT)*MESHP%BOUNDDIR(CC,BCT)&
+                     & *(DSP%FIELDS(BC,2) - DSP%FIELDS(CC,2))  
+             ENDIF
+            
              ! advective flux for total ligand and total protein
              FLUXADV = FLUXADV - MESHP%BOUNDDIR(CC,BCT)*DSP%VEL(CC,BCT)*WSHIFT
           ENDIF
        ENDDO            
        
        DFDT(CC,:) = (FLUXDIFF+FLUXADV)/MESHP%VOL(CC)
+       ! DO FC = 1,DSP%NFIELD
+       !    IF (.NOT.DSP%MOBILEFIELD(FC)) THEN
+       !       ! field not allowed to move
+       !       DFDT(CC,FC) = 0D0
+       !    ENDIF
+       ! END DO
+
        FLUX(CC,:) = DFDT(CC,:)*MESHP%VOL(CC)
 
        IF (DSP%ISPERM(CC)) THEN
           ! connection with external concentrations at permeable node                    
           ! can have different permeability for each field
           ! save flux to external environment only
-          FLUX(CC,:) = -DSP%PERM(CC,:)*(DSP%CEXT - DSP%FIELDS(CC,:))
-          DFDT(CC,:) = DFDT(CC,:) - FLUX(CC,:)/MESHP%VOL(CC)          
+          FLUX(CC,:) = -DSP%PERM(CC,:)*(DSP%CEXT - DSP%FIELDS(CC,:))          
+          DFDT(CC,:) = DFDT(CC,:) - FLUX(CC,:)/MESHP%VOL(CC)
        ENDIF
-       
-       IF (.NOT.DSP%MOBILEFIELD(2)) THEN
-          ! protein not allowed to move
-          DFDT(CC,2) = 0D0
-       END IF
-       
+                     
        ! get change in free ligand from delta total lig and delta total prot
        LKD = DSP%FIELDS(CC,1) + DSP%KDEQUIL;
        DFDT(CC,1) = (DFDT(CC,1) - DSP%FIELDS(CC,1)*DFDT(CC,2)/LKD)/ &            
-            & (1 + DSP%FIELDS(CC,2)*DSP%KDEQUIL/LKD**2)
-       
-       IF (.NOT.DSP%MOBILEFIELD(1)) THEN
-          ! free ligand not allowed to move
-          DFDT(CC,1) = 0D0
-       ENDIF
-            
-             
+            & (1 + DSP%FIELDS(CC,2)*DSP%KDEQUIL/LKD**2)                       
       
     ENDDO
 
