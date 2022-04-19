@@ -305,30 +305,64 @@ CONTAINS
     ENDIF
   END SUBROUTINE GETPERP
 
-  SUBROUTINE RANDSELECT1_INT(LIST,VAL,IND)
+  SUBROUTINE RANDSELECT1_INT(LIST,VAL,IND,WEIGHTS)
     ! select 1 integer from a list
     ! returns the value and its index in the list
+    ! Optional: provide a list of WEIGHTS (not normalized) for selecting each
+    ! element of LIST
+    
     IMPLICIT NONE
     INTEGER, INTENT(IN) :: LIST(:)
     INTEGER, INTENT(OUT) :: VAL,IND
     INTEGER :: N
     
     
-    N = SIZE(LIST)    
+    N = SIZE(LIST)
+    ! total sum of the weights
+    IF (PRESENT(WEIGHTS)) THEN
+       SW = SUM(WEIGHTS)
+    ELSE
+       SW = N
+    END IF
+    
 
-    IND = FLOOR(GRND()*N)+1
-    DO WHILE (IND.GT.N)
-       IND = FLOOR(GRND()*N)+1       
+    ! pick a number in [1,total sum] inclusive
+    IND = FLOOR(GRND()*SW)+1
+    DO WHILE (IND.GT.SW) ! accound for grnd occasionally giving exactly 1
+       IND = FLOOR(GRND()*SW)+1       
     END DO
 
-    VAL = LIST(IND)
+    IF (PRESENT(WEIGHTS)) THEN
+       ! pick a number in [1,total sum) 
+       RV = GRND()*SW
+       DO WHILE (RV.GE.SW) ! accound for grnd occasionally giving exactly 1
+          RV = GRND()*SW
+       END DO
+
+       CUMSUM = 0D0
+       DO C = 1,N
+          ! NEED TO FINISH HERE
+       END DO
+       
+    ELSE
+       ! pick a number in [1,total sum] inclusive
+       IND = FLOOR(GRND()*SW)+1
+       DO WHILE (IND.GT.SW) ! accound for grnd occasionally giving exactly 1
+          IND = FLOOR(GRND()*SW)+1       
+       END DO
+       
+       VAL = LIST(IND)
+    END IF
 
   end SUBROUTINE RANDSELECT1_INT
+
+ 
+  
 
   SUBROUTINE RANDSELECT_INT(LIST,NPICK,REPLACE,VALS,INDS)
     ! select NPICK values from LIST
     ! with or without replacement
-    ! WARNING: this is probably an incredibly inefficient method for long lists
+    ! WARNING: this is an incredibly inefficient method for long lists
     ! (have to keep copying arrays)
     
     IMPLICIT NONE
