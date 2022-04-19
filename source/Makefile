@@ -34,6 +34,9 @@ osg: $(OBJS) main.o
 test: $(OBJS) testmain.o
 	$(FC) $(FLAGS) $(DEBUGFLAGS) $(OBJS) testmain.o -o $(TESTEXE) $(LIBS)
 
+basic: $(OBJS) test.o
+	$(FC) $(FLAGS) $(DEBUGFLAGS) $(OBJS) test.o -o $(TESTEXE) $(LIBS)
+
 clean: 
 	rm *.o *.mod
 

@@ -15,6 +15,10 @@ MODULE MESHUTIL
      ! VOL: volume of cell, used to convert flux to conc
      ! for non-reservoir cell, LEN and VOL should be same
      ! for a reservoir cell, this is the volume of the cell divided by pi a^2
+     ! SA: metric for surface area of cell, used for computing permeability and
+     ! for weighting selection probability in RANDFIXCELLS
+     ! SA is in units of length. For a tube cell, SA=LEN
+     ! for reservoir is specified directly in terms of SA = (surface area)/(2*pi*a)
      ! LENPM: length to the center of each adjacent cell (h_plus, h_minus in the math notes motation)
      DOUBLE PRECISION, POINTER :: POS(:,:), LEN(:), LENPM(:,:), VOL(:), SA(:)
      ! number of neighbors for each cell

@@ -314,12 +314,19 @@ CONTAINS
     IMPLICIT NONE
     INTEGER, INTENT(IN) :: LIST(:)
     INTEGER, INTENT(OUT) :: VAL,IND
+    DOUBLE PRECISION, INTENT(IN), OPTIONAL :: WEIGHTS(:)
     INTEGER :: N
-    
+    DOUBLE PRECISION :: CUMSUM, SW, RV
     
     N = SIZE(LIST)
+    
     ! total sum of the weights
     IF (PRESENT(WEIGHTS)) THEN
+       IF (SIZE(WEIGHTS).NE.N) THEN
+          PRINT*, 'ERROR IN RANDSELECT1_INT: weights has different size than list.', SIZE(LIST), SIZE(WEIGHTS)
+          STOP 1
+       ENDIF       
+       
        SW = SUM(WEIGHTS)
     ELSE
        SW = N
@@ -340,26 +347,26 @@ CONTAINS
        END DO
 
        CUMSUM = 0D0
-       DO C = 1,N
-          ! NEED TO FINISH HERE
+       IND = 0
+       DO WHILE (CUMSUM.LE.RV)
+          IND = IND+1
+          CUMSUM=CUMSUM+WEIGHTS(IND)
        END DO
-       
     ELSE
        ! pick a number in [1,total sum] inclusive
        IND = FLOOR(GRND()*SW)+1
        DO WHILE (IND.GT.SW) ! accound for grnd occasionally giving exactly 1
           IND = FLOOR(GRND()*SW)+1       
-       END DO
-       
-       VAL = LIST(IND)
+       END DO       
     END IF
 
+    VAL = LIST(IND)
   end SUBROUTINE RANDSELECT1_INT
 
  
   
 
-  SUBROUTINE RANDSELECT_INT(LIST,NPICK,REPLACE,VALS,INDS)
+  SUBROUTINE RANDSELECT_INT(LIST,NPICK,REPLACE,VALS,INDS,WEIGHTS)
     ! select NPICK values from LIST
     ! with or without replacement
     ! WARNING: this is an incredibly inefficient method for long lists
@@ -369,6 +376,7 @@ CONTAINS
     INTEGER, INTENT(IN) :: LIST(:), NPICK
     LOGICAL, INTENT(IN) :: REPLACE
     INTEGER, INTENT(OUT) :: VALS(NPICK), INDS(NPICK)
+    DOUBLE PRECISION, INTENT(IN), OPTIONAL :: WEIGHTS(:)
     LOGICAL :: AVAILABLE(SIZE(LIST))
     INTEGER :: I, PICKIND, INDLIST(SIZE(LIST))
     
@@ -382,10 +390,17 @@ CONTAINS
     
     DO I = 1,NPICK
        IF (REPLACE) THEN
-          CALL RANDSELECT1_INT(LIST,VALS(I),INDS(I))         
+          IF (PRESENT(WEIGHTS)) THEN
+             CALL RANDSELECT1_INT(LIST,VALS(I),INDS(I),WEIGHTS)
+          ELSE
+             CALL RANDSELECT1_INT(LIST,VALS(I),INDS(I))
+          ENDIF
        ELSE
-          
-          CALL RANDSELECT1_INT(PACK(INDLIST,AVAILABLE),INDS(I),PICKIND)
+          IF (PRESENT(WEIGHTS)) THEN
+             CALL RANDSELECT1_INT(PACK(INDLIST,AVAILABLE),INDS(I),PICKIND,PACK(WEIGHTS,AVAILABLE))             
+          ELSE
+             CALL RANDSELECT1_INT(PACK(INDLIST,AVAILABLE),INDS(I),PICKIND)
+          ENDIF
           AVAILABLE(INDS(I)) = .FALSE.
           VALS(I) = LIST(INDS(I))
        ENDIF

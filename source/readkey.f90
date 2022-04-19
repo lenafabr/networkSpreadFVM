@@ -95,9 +95,13 @@ SUBROUTINE READKEY
   ABSORBERS = 0
   NABS = 0 ! number of absorber nodes
   NFIX = 0 ! number of fixed nodes
+  NFIXCELL = 0 ! number of fixed cells
   FIXNODEFROMNETFILE = .false. ! determine fixed nodes based on network file
 
+  ! randomly pick some number of network nodes to fix
   RANDFIXNODES = .FALSE.
+  ! randomly pick some number of mesh cells to fix
+  RANDFIXCELLS = .FALSE.
   
   ! edges on which the field starts (overwrites nodes)
   NSTARTEDGE = 0
@@ -437,7 +441,13 @@ SUBROUTINE READKEY
               CALL READF(PERMEABILITY(NPERM,I))
            ENDDO
         CASE('PRINTEVERY')
-           CALL READI(PRINTEVERY)            
+           CALL READI(PRINTEVERY)
+        CASE('RANDFIXCELLS')
+           RANDFIXCELLS = .TRUE.
+           CALL READI(FC) ! which field is this for
+           CALL READI(NFIXCELL(FC)) ! how many nodes to fix?
+           CALL READF(TMP) ! What value to fix to
+           FIXVALS(:,FC) = TMP
         CASE('RANDFIXNODES')
            RANDFIXNODES = .TRUE.
            CALL READI(FC) ! which field is this for
