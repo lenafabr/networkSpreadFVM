@@ -89,6 +89,11 @@ MODULE KEYS
   LOGICAL :: TRACKFIXNODEFLUX ! track flux out of fixed nodes rather than absorber nodes
   ! determine fixed nodes from the network file
   LOGICAL :: FIXNODEFROMNETFILE
+  ! Fix nearest mesh cells to points selected in a circle
+  LOGICAL :: RANDFIXPTS
+  INTEGER :: NFIXPT(MAXNFIELD), FIXPTS(MAXNABSORBER,MAXNFIELD)
+  DOUBLE PRECISION :: FIXPTCENT(2),FIXPTRAD
+  
 
   ! Activation and depletion
   INTEGER, PARAMETER :: MAXNACT = 100

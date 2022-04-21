@@ -73,7 +73,7 @@ REAL, SAVE :: RNORMVSAVE, RNORMSLNSAVE
 PRIVATE
 PUBLIC :: dp, sgrnd, grnd, init_genrand, rnorm, MT,mti,MVNORM
 ! efk: global variables to allow restarting of rnorm() calculation from savefile
-PUBLIC :: RNORMRESTART, RNORMSLNSAVE, RNORMVSAVE
+PUBLIC :: RNORMRESTART, RNORMSLNSAVE, RNORMVSAVE, RANDUNIFCIRCLE
 
 CONTAINS
 
@@ -291,6 +291,30 @@ FUNCTION MVNORM(N,MU,CHOLCOV) RESULT (XDEV)
   CALL DTRMV('L','N','N',N,CHOLCOV,N,XDEV,1)
   XDEV = XDEV + MU
 END FUNCTION MVNORM
+
+FUNCTION RANDUNIFCIRCLE(N,CENT,RAD) RESULT (COORDS)
+  ! sample points uniformly in a circle
+  ! N = number of points to sample
+  ! CENT = circle center
+  ! RAD = circle radius
+  ! returns Nx2 set of coordinates
+  INTEGER, INTENT(IN) :: N
+  DOUBLE PRECISION, INTENT(IN) :: CENT(2), RAD
+  DOUBLE PRECISION :: COORDS(N,2)
+  DOUBLE PRECISION :: R, TH
+  DOUBLE PRECISION, PARAMETER :: PI =  3.141592653589793D0
+  INTEGER :: I
+  
+  DO I = 1,N
+     ! sample radial coord
+     R = SQRT(GRND())*RAD
+     ! sample angular coord
+     TH = GRND()*2*PI
+     COORDS(I,:) = (/COS(TH),SIN(TH)/)*R + CENT
+  ENDDO
+
+END FUNCTION RANDUNIFCIRCLE
+
 
 END MODULE mt19937
 

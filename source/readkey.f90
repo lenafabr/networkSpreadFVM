@@ -96,12 +96,19 @@ SUBROUTINE READKEY
   NABS = 0 ! number of absorber nodes
   NFIX = 0 ! number of fixed nodes
   NFIXCELL = 0 ! number of fixed cells
+  NFIXPT = 0 ! Number of fixed points
   FIXNODEFROMNETFILE = .false. ! determine fixed nodes based on network file
 
+  ! Where to pick points in a circle
+  FIXPTCENT = 0D0; FIXPTRAD = 1D0
+  
   ! randomly pick some number of network nodes to fix
   RANDFIXNODES = .FALSE.
   ! randomly pick some number of mesh cells to fix
   RANDFIXCELLS = .FALSE.
+  ! Randomly pick points in a circle and fix mesh cells nearest them
+  RANDFIXPTS = .FALSE.
+  
   
   ! edges on which the field starts (overwrites nodes)
   NSTARTEDGE = 0
@@ -445,7 +452,7 @@ SUBROUTINE READKEY
         CASE('RANDFIXCELLS')
            RANDFIXCELLS = .TRUE.
            CALL READI(FC) ! which field is this for
-           CALL READI(NFIXCELL(FC)) ! how many nodes to fix?
+           CALL READI(NFIXCELL(FC)) ! how many cells to fix?
            CALL READF(TMP) ! What value to fix to
            FIXVALS(:,FC) = TMP
         CASE('RANDFIXNODES')
@@ -454,6 +461,16 @@ SUBROUTINE READKEY
            CALL READI(NFIX(FC)) ! how many nodes to fix?
            CALL READF(TMP) ! What value to fix to
            FIXVALS(:,FC) = TMP
+        CASE('RANDFIXPTS')
+           RANDFIXPTS = .TRUE.
+           CALL READI(FC) ! which field is this for
+           CALL READI(NFIXPT(FC)) ! how many points to fix
+           CALL READF(TMP) ! what value to fix to
+           FIXVALS(:,FC) = TMP
+           CALL READF(FIXPTRAD) ! radius of circle in which to pick points
+           IF (NITEMS.GT.5) THEN ! center of circle
+              CALL READF(FIXPTCENT(1)); CALL READF(FIXPTCENT(2))
+           ENDIF
         CASE('RANDPERMNODES')
            RANDPERMNODES = .TRUE.
            CALL READI(NPERM)

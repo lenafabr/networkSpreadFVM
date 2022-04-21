@@ -18,3 +18,9 @@ any(data(:,2)==data(:,3))
 for c = 1:10
     counts(c) = nnz(data(:,2)==c);
 end
+
+%% test random selection in a circle
+data = dlmread('./test.txt');
+
+plot(data(:,1),data(:,2),'.')
+axis equal
