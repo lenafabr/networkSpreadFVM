@@ -21,17 +21,21 @@ MESHSIZE 0.1D0  1
 
 # dynamic run parameters
 # how many total steps to run
-NSTEP 2D5
+NSTEP 1D5
 # timestep size
 DELT 5D-4
+
 # how often to dump snapshots and in what file
 SNAPSHOTS 500 *.snap.txt
 # how often to print output
 PRINTEVERY 1D3
 
-# starting particles with a certain concentration on the given edges
+# starting bolus centered around the given node
+STARTNODES 352
+# radius for starting bolus
+STARTNODERAD 1D0
+# concentration of starting bolus
 STARTCONC 1D0
-STARTEDGES 410   421   439   442   443   444   453
 
 # particle diffusivity
 DCOEFF 1D0
