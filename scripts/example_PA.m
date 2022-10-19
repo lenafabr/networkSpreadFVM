@@ -23,7 +23,7 @@ clear M
 ct = 0;
 figure
 colormap(cmap)    
-for sc = 1%:nsnap
+for sc = 1:nsnap
     ct = ct+1;
     sc
        
