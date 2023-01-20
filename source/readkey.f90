@@ -133,6 +133,7 @@ SUBROUTINE READKEY
   ! reservoir volumes and surface areas
   RESVVOL= 1D0
   RESVSA = 1D0
+  RESVLEN = 1D0
   ! are reservoirs well-mixed?
   RESVMIX = .TRUE.
   DORESERVOIRS = .FALSE.
@@ -492,14 +493,17 @@ SUBROUTINE READKEY
               ! assume all reservoirs have same parameters
               CALL READF(RESVVOL(1))
               CALL READF(RESVSA(1))
-              IF (NITEMS.GT.4) CALL READO(RESVMIX(1))
+              CALL READF(RESVLEN(1))
+              IF (NITEMS.GT.5) CALL READO(RESVMIX(1))
               RESVVOL = RESVVOL(1)
               RESVSA = RESVSA(1)
+              RESVLEN = RESVLEN(1)
               RESVMIX = RESVMIX(1)
            ELSE
               CALL READF(RESVVOL(RC))
               CALL READF(RESVSA(RC))
-              IF (NITEMS.GT.4) CALL READO(RESVMIX(RC))
+              CALL READF(RESVLEN(RC))
+              IF (NITEMS.GT.5) CALL READO(RESVMIX(RC))
            ENDIF            
         CASE('RNGSEED')
            CALL READI(RNGSEED)
@@ -704,6 +708,5 @@ SUBROUTINE READKEY
      ENDIF
   ENDIF    
   print*, '----------------------------------------------------'
-
 
 END SUBROUTINE READKEY
