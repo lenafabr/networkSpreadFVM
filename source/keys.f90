@@ -43,7 +43,6 @@ MODULE KEYS
   ! -----------------
   ! solving diffusion equations and propagating particles
   ! ---------------- 
-  INTEGER :: NPART ! number of particles to propagate
   INTEGER :: NSTEP ! number of steps to propagate for
   DOUBLE PRECISION :: DELT ! time-step for BD sims
   DOUBLE PRECISION :: DCOEFF(MAXNFIELD) ! sets time units

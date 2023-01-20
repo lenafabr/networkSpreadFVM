@@ -1,0 +1,42 @@
+# parameter file for watching spread of continuously photoactivated region
+# What you want the code to do. Do not change this
+ACTION rundynamics
+
+# instant switching of random velocities. Velocities are turned off. Ignore this.
+VELCONTROL randvelswitch
+RUNSPEED 0D0
+
+# set random number generator by system time and file name
+RNGSEED -2
+
+# network structure stored in this file
+NETFILE WT_COS7_KDEL_Cell3_um.net
+
+# output flux data
+# OUTFILE *.out.txt 100
+
+# meshing parametes
+# aim for this length of mesh elements, with at least 1 intermediate node on each edge
+MESHSIZE 0.1D0  1
+
+# dynamic run parameters
+# how many total steps to run
+NSTEP 1D5
+# timestep size
+DELT 5D-4
+
+# how often to dump snapshots and in what file
+SNAPSHOTS 500 *.snap.txt
+# how often to print output
+PRINTEVERY 1D3
+
+# starting bolus centered around the given node
+STARTNODES 352
+# radius for starting bolus
+STARTNODERAD 1D0
+# concentration of starting bolus
+STARTCONC 1D0
+
+# particle diffusivity
+DCOEFF 1D0
+

@@ -64,7 +64,6 @@ SUBROUTINE READKEY
   ! network parameters
   MAXBRANCH = 10 ! max number of branches per node
 
-  NPART = 1000 ! number of particles to propagate
   NSTEP = 1E6 ! Number of steps to propagate for
   DELT = 1D-4 ! time step for BD propagation
   DCOEFF = 1D0 ! diffusion coefficient
@@ -264,7 +263,14 @@ SUBROUTINE READKEY
 
         SELECT CASE(WORD) ! pick which keyword
         CASE('ABSORBERS')
+           print*, 'ABSORBERS keyword is currently buggy. Do not use.'
+           STOP 1
+           
            CALL READI(FC) ! which field is this for
+           IF (FC.GT.MAXNFIELD) THEN
+              PRINT*, 'ERROR: absorbers has an invalid field number', FC
+              STOP 1
+           ENDIF
            DO I = 1,NITEMS-2
               NABS(FC) = NABS(FC) + 1
               IF (NABS(FC).GT.MAXNABSORBER) THEN
@@ -362,8 +368,8 @@ SUBROUTINE READKEY
               PRINT*, 'ERROR IN READKEY: too many fixed nodes', NFIX, MAXNABSORBER
               STOP 1
            ENDIF
-           CALL READI(FIXNODES(NFIX(FC),FC))
-           CALL READF(FIXVALS(NFIX(FC),FC))
+           CALL READI(FIXNODES(NFIX(FC),FC)) ! which node is being fixed
+           CALL READF(FIXVALS(NFIX(FC),FC)) ! what value is it fixed to
         CASE('FIXNODEFROMNETFILE')
            IF (NITEMS.GT.1) THEN
               CALL READO(FIXNODEFROMNETFILE)
@@ -411,8 +417,6 @@ SUBROUTINE READKEY
            ENDDO
         CASE('NODEVOL')
            CALL READF(NODEVOL)
-        CASE('NPART')
-           CALL READI(NPART)
         CASE('NSTEP')
            CALL READI(NSTEP)
         CASE('OUTFILE')
@@ -573,7 +577,6 @@ SUBROUTINE READKEY
         CASE('STOPRATE')
            CALL READF(STOPRATE)
         CASE('SWITCHVELS')
-           print*, 'testxf:', nitems
            IF (NITEMS.GT.1) THEN
               CALL READO(SWITCHVELS)
            ELSE
@@ -675,7 +678,6 @@ SUBROUTINE READKEY
   print*, 'ACTION: ', TRIM(ADJUSTL(ACTION))
   print*, 'Output file: ', TRIM(OUTFILE)
   print*, 'Network file: ', TRIM(NETFILE)
-  print*, 'Number of particles:', NPART
   PRINT*, 'Starting edges:', STARTEDGES(1:NSTARTEDGE)
   PRINT*, 'Start on nodes:', STARTNODES(1:NSTARTNODE)
   DO FC = 1,NFIELD

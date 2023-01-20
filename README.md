@@ -23,3 +23,11 @@ example1_ca.out contains the total flux of calcium out of the network at each ti
 example1_ca.snap.txt contains the concentration of free calcium and total buffer protein at all mesh cells, at each snapshot time
 
 To parse this data and generate plots, an example matlab script is provided in scripts/example1_ca.m
+
+Example 2:
+Run with
+../netmeshdynamicsFVM.exe example_PA
+
+This will simulate spreading of a 'photoactivated' bolus of particles from an initial starter region.
+
+To visualize the spread, use the matlab script in scripts/example_PA.m
