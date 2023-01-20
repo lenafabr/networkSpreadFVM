@@ -3,6 +3,7 @@ MODULE FVMDYNAMICS
   USE NETWORKUTIL, ONLY : NETWORK
   USE MESHUTIL, ONLY : MESH
   USE DYNSYSUTIL, ONLY : DYNSYSTEM
+  USE KEYS, ONLY : VERBOSE
   
   IMPLICIT NONE
 
@@ -173,6 +174,7 @@ CONTAINS
        ! ---------------
 
        IF (DSP%BUFFERTYPE.EQ.2) THEN! rapid equilibration
+!          VERBOSE = STEP.GT.80D3
           CALL EULERSTEPEQUIL(DSP,DELT,DFDT,FLUX)
        ELSE
           CALL EULERSTEP(DSP,DELT,DFDT,FLUX)
@@ -541,6 +543,7 @@ CONTAINS
     
     ! DFDT = time derivative of fields on all cells
     ! FLUX = flux going into fixed or absorber nodes
+    
     IMPLICIT NONE
     TYPE(DYNSYSTEM), POINTER :: DSP
     DOUBLE PRECISION, INTENT(IN) :: DELT
@@ -590,6 +593,8 @@ CONTAINS
        ENDDO
 
        ! Advective flux: via Lax-Wendroff discretization
+       ! WARNING: this has not been thoroughly thought through for the case where there are flows
+       ! going across boundaries to large reservoirs!
        FLUXADV = 0D0
        DO BCT = 1,DEG
           ! approximate field values on boundary after half a timestep
@@ -622,7 +627,8 @@ CONTAINS
              FLUXADV = FLUXADV - MESHP%BOUNDDIR(CC,BCT)*DSP%VEL(CC,BCT)*WSHIFT
           ENDIF
        ENDDO            
-       
+
+!       print*, 'TESTX1:', CC, meshp%celltype(cc), meshp%resvind(cc), FLUXDIFF, FLUXADV, MESHP%VOL(CC)
        DFDT(CC,:) = (FLUXDIFF+FLUXADV)/MESHP%VOL(CC)
        ! DO FC = 1,DSP%NFIELD
        !    IF (.NOT.DSP%MOBILEFIELD(FC)) THEN
@@ -631,6 +637,8 @@ CONTAINS
        !    ENDIF
        ! END DO
 
+       ! Returned FLUX array contains flux for each permeable cell
+       ! in units of particles per second
        FLUX(CC,:) = DFDT(CC,:)*MESHP%VOL(CC)
 
        IF (DSP%ISPERM(CC)) THEN

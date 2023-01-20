@@ -226,8 +226,9 @@ CONTAINS
        MESHP%CELLTYPE(CT) = 2 ! reservoir cell
        MESHP%RESVIND(CT) = RC ! which reservoir it belongs to
 
-       ! volume of reservoir (in terms of edge length; this is really V/(pi a^2)
+       ! volume of reservoir (in terms of edge length; this is really V/(pi a^2)       
        MESHP%VOL(CT) = NETP%RESVVOL(RC)
+
        ! surface area of reservoir (in terms of edge length; this is really V/(2*pi*a)
        MESHP%SA(CT) = NETP%RESVSA(RC)
        
@@ -457,25 +458,38 @@ CONTAINS
     ! get appropriate length (beyond end nodes) for reservoir
     ! for reservoir cell, length = avg cell lngth on all attached edges
     ! NOTE: this length is not the cell volume, but rather a length
-    ! used in weighted avg for velocity calculations
+    ! used in weighted avg for velocity and flux calculations
+
+    ! from diffusive flux calculations to narrow exits (1/19/2023 notes)
+    ! effective RESVLEN should be:
+    ! for spheres: L = pi*r/2 (r = tube radius)
+    ! for sheets: L = r^2/h*ln(R/r) (h=sheet thickness, pi*R^2 = A = sheet area)
     DO CC = 1,MESHP%NCELL
-       IF (MESHP%CELLTYPE(CC).EQ.2) THEN
-!          MESHP%LEN(CC) = MESHP%VOL(CC)
-          
-          EXTLEN = 0D0; CT = 0
-          DO BCT = 1,MESHP%DEG(CC) ! look over all boundary cells
-             BC = MESHP%BOUNDS(CC,BCT)             
-             IF (BC.GT.0) THEN
-                EXTLEN = EXTLEN + MESHP%LEN(BC)/MESHP%DEG(BC)
-                CT = CT+1
- !               MESHP%LENPM(CC,BCT) = 2*MESHP%LEN(BC)/MESHP%DEG(BC)
- !               MESHP%LENPM(CC,BCT) = MESHP%LEN(BC)/MESHP%DEG(BC) + MESHP%VOL(CC)/MESHP%DEG(CC)
-             ENDIF
-          ENDDO
-          MESHP%LEN(CC) = MESHP%DEG(CC)*EXTLEN/CT         
-         
-       ENDIF       
+       IF (MESHP%CELLTYPE(CC).EQ.2) THEN ! reservoir cells only
+          RC = MESHP%RESVIND(CC) ! which reservoir is this?
+          MESHP%LEN(CT) = NETP%RESVLEN(RC)/2*MESHP%DEG(CC)
+       ENDIF
     ENDDO
+
+    ! --------------------
+    ! OLD inaccurate calculations
+   !  DO CC = 1,MESHP%NCELL
+!        IF (MESHP%CELLTYPE(CC).EQ.2) THEN
+! !          MESHP%LEN(CC) = MESHP%VOL(CC)
+          
+!           EXTLEN = 0D0; CT = 0
+!           DO BCT = 1,MESHP%DEG(CC) ! look over all boundary cells
+!              BC = MESHP%BOUNDS(CC,BCT)             
+!              IF (BC.GT.0) THEN
+!                 EXTLEN = EXTLEN + MESHP%LEN(BC)/MESHP%DEG(BC)
+!                 CT = CT+1 
+!              ENDIF
+!           ENDDO
+!           ! multiply by degree so that in the LENPM calculation that cancels out
+!           MESHP%LEN(CC) = MESHP%DEG(CC)*EXTLEN/CT                  
+!        ENDIF       
+!     ENDDO
+    ! -----------------------
     
     ! For each cell, get the length to each neighboring cell
     DO CT = 1,MESHP%NCELL
