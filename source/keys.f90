@@ -111,9 +111,15 @@ MODULE KEYS
 
   ! permeability
   ! permeability for each field and external concentrations
-  DOUBLE PRECISION :: PERMEABILITY(MAXNABSORBER,MAXNFIELD), CEXT(MAXNFIELD)
+  DOUBLE PRECISION :: PERMEABILITY(MAXNABSORBER,MAXNFIELD), CEXT(MAXNFIELD) 
   INTEGER :: NPERM ! number of permeable nodes
   INTEGER :: PERMNODES(MAXNABSORBER) ! which nodes are permeable
+
+  ! Permeability set around certain spatial positions
+  DOUBLE PRECISION :: POSPERMEABILITY(MAXNABSORBER,MAXNFIELD)
+  INTEGER :: NPERMPOS ! number of permeable centers
+  DOUBLE PRECISION :: PERMPOS(MAXNABSORBER,3) ! permeable center positions
+  
   LOGICAL :: TRACKFLUXPERM ! track flux out of permeable nodes
   LOGICAL :: OUTPUTTOTFLUXONLY ! output tot flux, not individual nodes
   ! permeable nodes selected randomly, or read in from file

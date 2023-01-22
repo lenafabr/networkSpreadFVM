@@ -372,7 +372,7 @@ CONTAINS
          & ACTNEARNODEDIST, DEPRATE, PERMNEARNODEDIST, FIXRECTANGLE, &
          & ALLOWFIXEDRESV, DORESERVOIRS, ALLOWRESVFIX, &
          & NFIXCELL, RANDFIXCELLS,FIXCELLS, RANDFIXPTS,FIXPTS,NFIXPT,FIXPTCENT,&
-         & FIXPTRAD, MAXNABSORBER
+         & FIXPTRAD, MAXNABSORBER, NPERMPOS,PERMPOS,POSPERMEABILITY
     USE NETWORKUTIL, ONLY : NETWORK
     USE GENUTIL, ONLY : RANDSELECT_INT
     USE MT19937, ONLY : RANDUNIFCIRCLE
@@ -696,9 +696,9 @@ CONTAINS
     ENDDO
 
     ! Only track flux from permeable nodes if there are some
-    TRACKFLUXPERM = TRACKFLUXPERM.AND.(NPERM.GT.0)
+    TRACKFLUXPERM = TRACKFLUXPERM.AND.(NPERM.GT.0.OR.NPERMPOS.GT.0)
     
-     IF (PERMNEARNODEDIST.GT.0) THEN
+     IF (PERMNEARNODEDIST.GT.0.AND.NPERM.GT.0) THEN
        ! make permeable all cells whose centers are near enough to fixed nodes
        DO FC = 1,DSP%NFIELD
           DO CT = 1,NPERM         
@@ -713,7 +713,23 @@ CONTAINS
              ENDDO
           ENDDO
        ENDDO
-    ENDIF    
+    ENDIF
+
+    ! Make permeable all cells within a given distance of a particular position
+    IF (NPERMPOS.GT.0) THEN
+       DO FC = 1,DSP%NFIELD
+          DO NC = 1,NPERMPOS ! go over all permeable centers
+             ! distances to the position
+             DO CC = 1,MESHP%NCELL
+                DIST = SQRT(SUM((MESHP%POS(CC,:)-PERMPOS(NC, 1:NETP%DIM))**2))
+                IF (DIST.LT.PERMNEARNODEDIST) THEN
+                   DSP%ISPERM(CC) = .TRUE.
+                   DSP%PERM(CC,:) = POSPERMEABILITY(CT,1:DSP%NFIELD)
+                ENDIF
+             ENDDO
+          ENDDO
+       ENDDO    
+    END IF
     
     PRINT*, 'TRACKFLUXPERM:', TRACKFLUXPERM
 
@@ -725,6 +741,22 @@ CONTAINS
           DSP%PERM(:,FC) = DSP%PERM(:,FC)*MESHP%SA*DCOEFF(FC)
        ENDDO
     END IF
+
+    print*, 'Permeable cells:'
+    DO CC = 1,MESHP%NCELL
+       IF (DSP%ISPERM(CC)) THEN
+          SELECT CASE (MESHP%CELLTYPE(CC))
+          CASE(0)
+             PRINT*, 'Node ', MESHP%NODEIND(CC), ', cell ', CC
+          CASE(1)
+             PRINT*, 'Edge ', MESHP%EDGEIND(CC,1), ', cell ', CC
+          CASE(2)
+             PRINT*, 'Reservoir ', MESHP%RESVIND(CC), ', cell ', CC
+          CASE DEFAULT
+             PRINT*, 'this mesh cell is an unknown case:', CC, MESHP%CELLTYPE(CC)
+          END SELECT
+       ENDIF
+    ENDDO
 END SUBROUTINE SETPARAMDYNSYS
   
   SUBROUTINE SETUPDYNSYS(DSP,MESHP,NFIELD)

@@ -149,6 +149,13 @@ SUBROUTINE READKEY
   ! by mesh cell length and diffusivity to give your permeability
   PERMEABILITY =0D0
   NPERM = 0 ! number of permeable nodes
+
+  NPERMPOS = 0 ! number of permeable center positions
+  ! permeability around each position
+  POSPERMEABILITY = 0D0
+  ! position of each permeability center
+  PERMPOS = 0D0
+  
   RANDPERMNODES = .FALSE. 
   ! external concentration (*pi*a^2 to get units of per length)
   CEXT = 0D0
@@ -156,6 +163,7 @@ SUBROUTINE READKEY
   PERMFROMFILE = .FALSE.
   TRACKFLUXPERM = .TRUE.
   ! make all cells within a certain radius of a permeable node also permeable
+  ! Also used to make permeable all cells within a radius of a permeable position
   PERMNEARNODEDIST = -1D0
   ! permeability supplied is actually prefactor to be multiplied by cell length and diffusivity
   USEPERMPREFACTOR = .TRUE.
@@ -451,6 +459,21 @@ SUBROUTINE READKEY
            DO I = 1,min(NITEMS-2,MAXNFIELD)
               ! permeability for each field
               CALL READF(PERMEABILITY(NPERM,I))
+           ENDDO
+        CASE('PERMPOS')
+           NPERMPOS = NPERMPOS +1
+           IF (NPERMPOS.GT.MAXNABSORBER) THEN
+              PRINT*, 'ERROR IN PERMPOS:', NPERMPOS, MAXNABSORBER
+              STOP 1
+           ENDIF
+           ! read in coordinates
+           ! WARNING: nondefault NETWORKDIM needs to be specified before this line
+           DO I = 1,NETWORKDIM
+              CALL READF(PERMPOS(NPERMPOS,I))
+           ENDDO           
+           DO I = 1,min(NITEMS-3,MAXNFIELD)
+              ! permeability for each field
+              CALL READF(POSPERMEABILITY(NPERMPOS,I))
            ENDDO
         CASE('PRINTEVERY')
            CALL READI(PRINTEVERY)

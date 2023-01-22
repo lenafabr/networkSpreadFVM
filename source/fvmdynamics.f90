@@ -190,7 +190,7 @@ CONTAINS
 
              IF (OUTPUTTOTFLUXONLY) THEN
                 DO FC = 1,DSP%NFIELD
-                   WRITE(OU,*) FC, SUM(pack(FLUX(:,FC),DSP%ISPERM))
+                   WRITE(OU,*) FC, SUM(pack(FLUX(:,1),DSP%ISPERM))
                 ENDDO
              ELSE
                 WRITE(OU,*) PACK(CELLLIST,DSP%ISPERM)
@@ -645,7 +645,7 @@ CONTAINS
           ! connection with external concentrations at permeable node                    
           ! can have different permeability for each field
           ! save flux to external environment only
-          FLUX(CC,:) = -DSP%PERM(CC,:)*(DSP%CEXT - DSP%FIELDS(CC,:))          
+          FLUX(CC,:) = -DSP%PERM(CC,:)*(DSP%CEXT - DSP%FIELDS(CC,:))
           DFDT(CC,:) = DFDT(CC,:) - FLUX(CC,:)/MESHP%VOL(CC)
        ENDIF
                      
