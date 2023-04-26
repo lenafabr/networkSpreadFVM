@@ -27,10 +27,13 @@ MODULE MESHUTIL
      ! -1 = dirichlet (fixed value) boundary
      ! 0 = reflecting (no-flux) boundary
      ! >0 = connected to another cell 
-     INTEGER, POINTER :: BOUNDS(:,:) ! list of neighbors for each cell
+     INTEGER, POINTER :: BOUNDS(:,:) ! list of neighbors for each cell     
      ! Bounddir is +1 if the edge direction across this boundary points
      ! outward from the cell; -1 if it points inward
-     INTEGER, POINTER :: BOUNDDIR(:,:)     
+     INTEGER, POINTER :: BOUNDDIR(:,:)
+
+     ! keep track of which boundaries are closed off
+     LOGICAL, POINTER :: BOUNDCLOSED(:,:)
 
      ! -----------
      ! mapping to a network structure
@@ -77,6 +80,48 @@ CONTAINS
     ENDDO
     
   END SUBROUTINE EDGETOBOUND
+
+  SUBROUTINE CLOSEBOUNDS(MESHP, PCLOSE)    
+    ! randomly close off some of the mesh-cell boundaries
+    ! pclose = probability each cell boundary is closed
+    USE MT19937, ONLY : GRND
+    IMPLICIT NONE
+    TYPE(MESH), POINTER :: MESHP
+    DOUBLE PRECISION, INTENT(IN) :: PCLOSE
+    INTEGER :: CC, BC, BCC, BCC2, BC2, NCLOSE, NTOT
+    DOUBLE PRECISION :: U, PTRY
+
+    ! each boundary will be counted twice for the 2 adjacent mesh cells,
+    ! this is the right probability to sample so that overall prob
+    ! of the boundary closing is PCLOSE
+    PTRY = 1 - SQRT(1D0-PCLOSE)
+
+    NCLOSE = 0
+    NTOT = 0
+    DO CC = 1,MESHP%NCELL       
+       DO BCC = 1,MESHP%DEG(CC)
+          BC = MESHP%BOUNDS(CC,BCC)
+          IF (BC.GT.0) THEN ! this is a real boundary between cells
+             NTOT = NTOT+1
+             DO BCC2 = 1,MESHP%DEG(BC) ! boundary must be closed for both adjacent cells
+                BC2 = MESHP%BOUNDS(BC,BCC2)
+                IF (BC2.EQ.CC) EXIT
+             ENDDO
+             IF (.NOT.MESHP%BOUNDCLOSED(BC,BCC2)) THEN ! not already closed
+                U = GRND()
+                IF (U.LT.PTRY) THEN
+                   MESHP%BOUNDCLOSED(CC,BCC) = .TRUE.
+                   MESHP%BOUNDCLOSED(BC,BCC2) = .TRUE.
+
+                   NCLOSE = NCLOSE + 1
+                ENDIF               
+             ENDIF
+          ENDIF
+       ENDDO
+    ENDDO
+
+    PRINT*, 'Closed N boundaries out of total:', NCLOSE, NTOT/2, PTRY, PCLOSE
+  END SUBROUTINE CLOSEBOUNDS
   
   SUBROUTINE SETUPNETWORKMESH(MESHP,NETP,MAXCELLLEN,MINNCELL)
     IMPLICIT NONE
@@ -506,11 +551,11 @@ CONTAINS
              MESHP%LENPM(CT,CC) = MESHP%LEN(CT)/MESHP%DEG(CT) + MESHP%LEN(BC)/MESHP%DEG(BC)
           ENDIF
        ENDDO
-    ENDDO
-
+    ENDDO   
+    
     MESHP%CELLSET = .TRUE.
-    NETP%MESHSET = .TRUE.
-
+    NETP%MESHSET = .TRUE.    
+    
     ! DEBUG: double check the LENPM matches up to LENs for bounding cells
     PRINT*, 'Testing that LENPM are self-consistent...'
     DO CC = 1,MESHP%NCELL
@@ -583,7 +628,7 @@ CONTAINS
          & MESHP%LENPM(NCELLTOT,MAXDEG), MESHP%SA(NCELLTOT))
     ALLOCATE(MESHP%DEG(NCELLTOT),MESHP%BOUNDS(NCELLTOT,MAXDEG))
     ALLOCATE(MESHP%CELLTYPE(NCELLTOT),MESHP%NODEIND(NCELLTOT), MESHP%EDGEIND(NCELLTOT,2), MESHP%TERMNODE(NCELLTOT,MAXDEG))
-    ALLOCATE(MESHP%BOUNDDIR(NCELLTOT,MAXDEG), MESHP%BOUNDEDGE(NCELLTOT,MAXDEG))
+    ALLOCATE(MESHP%BOUNDDIR(NCELLTOT,MAXDEG), MESHP%BOUNDEDGE(NCELLTOT,MAXDEG), MESHP%BOUNDCLOSED(NCELLTOT,MAXDEG))
     ALLOCATE(MESHP%RESVIND(NCELLTOT))
     
     MESHP%ARRAYSET = .TRUE.
@@ -591,6 +636,8 @@ CONTAINS
     MESHP%BOUNDS = 0
     MESHP%BOUNDEDGE = 0
     MESHP%BOUNDDIR = 0
+
+    MESHP%BOUNDCLOSED = .FALSE.
   END SUBROUTINE ALLOCATEMESH
 
    SUBROUTINE CLEANUPMESH(MESHP)
@@ -602,7 +649,7 @@ CONTAINS
     DEALLOCATE(MESHP%POS, MESHP%LEN, MESHP%LENPM, MESHP%VOL, MESHP%SA)
     DEALLOCATE(MESHP%DEG,MESHP%BOUNDS)
     DEALLOCATE(MESHP%CELLTYPE,MESHP%NODEIND, MESHP%EDGEIND)
-    DEALLOCATE(MESHP%TERMNODE, MESHP%BOUNDDIR, MESHP%BOUNDEDGE)
+    DEALLOCATE(MESHP%TERMNODE, MESHP%BOUNDDIR, MESHP%BOUNDEDGE, MESHP%BOUNDCLOSED)
     DEALLOCATE(MESHP%RESVIND)
     
     MESHP%ARRAYSET = .FALSE.

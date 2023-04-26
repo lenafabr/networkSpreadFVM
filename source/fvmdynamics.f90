@@ -580,6 +580,8 @@ CONTAINS
        DO BCT = 1,DEG ! boundary counter
           BC = MESHP%BOUNDS(CC,BCT) ! boundary cell
           IF (BC.GT.0) THEN
+             IF (MESHP%BOUNDCLOSED(CC,BCT)) CYCLE ! this boundary is closed off
+             
              ! flux across each boundary defined as
              ! D*(w_(j+1)-w_j)/h+
              ! get diffusive flux of TOTAL LIGAND
@@ -601,7 +603,9 @@ CONTAINS
           ! positive bounddir means + velocities point out from this cell
           BC = MESHP%BOUNDS(CC,BCT) ! boundary cell
           
-          IF (BC.GT.0) THEN            
+          IF (BC.GT.0) THEN
+             IF (MESHP%BOUNDCLOSED(CC,BCT)) CYCLE ! this boundary is closed off
+             
              ! TOTAL ligand
              ! Weighted average of field on boundary
              IF (.NOT.DSP%MOBILEFIELD(2)) THEN ! immobile proteins, only free ligand feels flow

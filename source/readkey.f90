@@ -107,7 +107,9 @@ SUBROUTINE READKEY
   RANDFIXCELLS = .FALSE.
   ! Randomly pick points in a circle and fix mesh cells nearest them
   RANDFIXPTS = .FALSE.
-  
+
+  ! probability of closing some edge boundaries (negative = never close)
+  PBOUNDCLOSE = -1D0
   
   ! edges on which the field starts (overwrites nodes)
   NSTARTEDGE = 0
@@ -441,6 +443,8 @@ SUBROUTINE READKEY
            ELSE
               CALL READO(OUTPUTTOTFLUXONLY)
            ENDIF
+        CASE('PBOUNDCLOSE')
+           CALL READF(PBOUNDCLOSE)
         CASE('PERMFROMFILE')
            IF (NITEMS.GT.1) THEN
               CALL READO(PERMFROMFILE)
