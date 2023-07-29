@@ -20,7 +20,9 @@ MODULE MESHUTIL
      ! SA is in units of length. For a tube cell, SA=LEN
      ! for reservoir is specified directly in terms of SA = (surface area)/(2*pi*a)
      ! LENPM: length to the center of each adjacent cell (h_plus, h_minus in the math notes motation)
-     DOUBLE PRECISION, POINTER :: POS(:,:), LEN(:), LENPM(:,:), VOL(:), SA(:)
+     ! RAD: radius for each mesh cell
+     ! NOTE: radius is only used if USEVARRAD keyword is on
+     DOUBLE PRECISION, POINTER :: POS(:,:), LEN(:), LENPM(:,:), VOL(:), SA(:), RAD
      ! number of neighbors for each cell
      INTEGER, POINTER :: DEG(:)
      ! for each edge (boundary) of the cell, list the type of boundary
@@ -551,7 +553,10 @@ CONTAINS
              MESHP%LENPM(CT,CC) = MESHP%LEN(CT)/MESHP%DEG(CT) + MESHP%LEN(BC)/MESHP%DEG(BC)
           ENDIF
        ENDDO
-    ENDDO   
+    ENDDO
+
+    ! default mesh cell radius
+    MESHP%RAD = TUBERAD
     
     MESHP%CELLSET = .TRUE.
     NETP%MESHSET = .TRUE.    
@@ -585,6 +590,52 @@ CONTAINS
     ENDDO
   END SUBROUTINE SETUPNETWORKMESH
 
+  SUBROUTINE SETMESHRADII(MESHP,NETP)
+    ! Set up radii for each mesh cell.
+    ! Also change volume of each non-reservoir mesh cell to be in terms of actual volume units.
+    ! node and reservoir radii are set to average of the connected edge radii
+    ! for now, sets radii based on radius of network edge
+    ! TODO: UPDATE TO ALLOW SINUSOIDALLY VARYING RADII ALONG AN EDGE
+    
+    IMPLICIT NONE
+    TYPE(MESH), POINTER :: MESHP
+    TYPE(NETWORK), POINTER :: NETP
+    INTEGER :: CC, NC, EC, RC, ECC, NCC, CT
+    DOUBLE PRECISION :: TOTRAD
+
+    DO CC = 1,MESHP%NCELL
+       SELECT CASE (MESHP%CELLTYPE(CC))
+       CASE (0) ! node cell radius (avg of surrounding edges)
+          NC = MESHP%NODEIND(CC)
+
+          ! get average radii of nearby edges
+          TOTRAD = 0D0
+          DO ECC = 1,NETP%NODEDEG(NC)
+             TOTRAD = TOTRAD + NETP%EDGERAD(NETP%NODEEDGE(NC,ECC))
+          ENDDO
+          MESHP%RAD(CC) = TOTRAD/NETP%NODEDEG(NC)
+       CASE (1) ! edge cell
+          EC = MESHP%EDGEIND(CC)
+          MESHP%RAD(CC) = NETP%EDGERAD(EC)
+       CASE (2) ! reservoir cell
+          RC = MESHP%RESVIND(CC)
+          ! get average radii of nearby edges
+          TOTRAD = 0D0
+          CT = 0
+          DO NCC = 1,NETP%RESVNNODE(RC)
+             NC = NETP%RESVNODES(RC,NCC) ! node belonging to this reservoir
+             DO ECC = 1,NETP%NODEDEG(NC) ! go over all edges from this node
+                TOTRAD = TOTRAD + NETP%EDGERAD(NETP%NODEEDGE(NC,ECC))
+                CT = CT+1
+             ENDDO
+          ENDDO
+          MESHP%RAD(CC) = TOTRAD/CT
+       END SELECT
+       
+    ENDDO
+       
+  END SUBROUTINE SETMESHRADII
+  
   SUBROUTINE OUTPUTMESH(MESHP,OUTFILE)
     ! output mesh structure to a file (for loading in matlab)
     IMPLICIT NONE
@@ -629,7 +680,7 @@ CONTAINS
     ALLOCATE(MESHP%DEG(NCELLTOT),MESHP%BOUNDS(NCELLTOT,MAXDEG))
     ALLOCATE(MESHP%CELLTYPE(NCELLTOT),MESHP%NODEIND(NCELLTOT), MESHP%EDGEIND(NCELLTOT,2), MESHP%TERMNODE(NCELLTOT,MAXDEG))
     ALLOCATE(MESHP%BOUNDDIR(NCELLTOT,MAXDEG), MESHP%BOUNDEDGE(NCELLTOT,MAXDEG), MESHP%BOUNDCLOSED(NCELLTOT,MAXDEG))
-    ALLOCATE(MESHP%RESVIND(NCELLTOT))
+    ALLOCATE(MESHP%RESVIND(NCELLTOT), MESHP%RAD(NCELLTOT))
     
     MESHP%ARRAYSET = .TRUE.
     
@@ -650,7 +701,7 @@ CONTAINS
     DEALLOCATE(MESHP%DEG,MESHP%BOUNDS)
     DEALLOCATE(MESHP%CELLTYPE,MESHP%NODEIND, MESHP%EDGEIND)
     DEALLOCATE(MESHP%TERMNODE, MESHP%BOUNDDIR, MESHP%BOUNDEDGE, MESHP%BOUNDCLOSED)
-    DEALLOCATE(MESHP%RESVIND)
+    DEALLOCATE(MESHP%RESVIND, MESHP%RAD)
     
     MESHP%ARRAYSET = .FALSE.
     MESHP%CELLSET = .FALSE.

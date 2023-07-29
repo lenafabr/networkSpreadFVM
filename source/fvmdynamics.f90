@@ -581,16 +581,40 @@ CONTAINS
           BC = MESHP%BOUNDS(CC,BCT) ! boundary cell
           IF (BC.GT.0) THEN
              IF (MESHP%BOUNDCLOSED(CC,BCT)) CYCLE ! this boundary is closed off
-             
-             ! flux across each boundary defined as
-             ! D*(w_(j+1)-w_j)/h+
-             ! get diffusive flux of TOTAL LIGAND
-             FLUXDIFF(1) = FLUXDIFF(1) &
-                  & + DSP%DCOEFF(1)*(DSP%FIELDS(BC,1) - DSP%FIELDS(CC,1))/MESHP%LENPM(CC,BCt) &
-                  & + DSP%DCOEFF(2)*(BFIELD(BC) - BFIELD(CC))/MESHP%LENPM(CC,BCt)
-             
-             ! get diffusive flux of  total protein 
-             FLUXDIFF(2) = FLUXDIFF(2) + DSP%DCOEFF(2)*(DSP%FIELDS(BC,2) - DSP%FIELDS(CC,2))/MESHP%LENPM(CC,BCt)
+
+             IF (DSP%VARRAD) THEN
+                ! mesh cells can have varying radii
+                ! flux across boundary = D(x) A(x) d/dx[C/A]
+                ! D(x) = D0/sqrt(1+R'^2)
+
+                ! scaling factor for diffusivity
+                DR = MESHP%RAD(BC)-MESHP%RAD(CC)
+                DSCL = SQRT(1 + (DR/MESHP%LENPM(CC,BCT))**2)
+                ! areas in the two membrane cell, and average at boundary
+                A1 = PI*MESHP%RAD(BC)**2; A2 = PI*MESHP%RAD(CC)**2
+                ABOUND = (A1 + A2)/2
+                
+                ! flux for total ligand
+                FLUXDIFF(1) = FLUXDIFF(1) &
+                     & + DSP%DCOEFF(1)/DSCL*ABOUND*(DSP%FIELDS(BC,1)/A1 &
+                     & - DSP%FIELDS(CC,1)/A2)/MESHP%LENPM(CC,BCt) &
+                     & + DSP%DCOEFF(2)/DSCL*ABOUND*(BFIELD(BC)/A1 - BFIELD(CC)/A2)/MESHP%LENPM(CC,BCT)
+
+                ! flux for total protein
+                FLUXDIFF(2) = FLUXDIFF(2) + &
+                     & DSP%DCOEFF(2)/DSCL*ABOUND*&
+                     & (DSP%FIELDS(BC,2)/A1 - DSP%FIELDS(CC,2)/A2)/MESHP%LENPM(CC,BCT)
+             ELSE
+                ! flux across each boundary defined as
+                ! D*(w_(j+1)-w_j)/h+
+                ! get diffusive flux of TOTAL LIGAND
+                FLUXDIFF(1) = FLUXDIFF(1) &
+                     & + DSP%DCOEFF(1)*(DSP%FIELDS(BC,1) - DSP%FIELDS(CC,1))/MESHP%LENPM(CC,BCt) &
+                     & + DSP%DCOEFF(2)*(BFIELD(BC) - BFIELD(CC))/MESHP%LENPM(CC,BCt)
+
+                ! get diffusive flux of  total protein 
+                FLUXDIFF(2) = FLUXDIFF(2) + DSP%DCOEFF(2)*(DSP%FIELDS(BC,2) - DSP%FIELDS(CC,2))/MESHP%LENPM(CC,BCt)
+             END IF
           ENDIF
        ENDDO
 

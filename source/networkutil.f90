@@ -34,7 +34,7 @@ MODULE NETWORKUTIL
      DOUBLE PRECISION, POINTER :: NODEWIDTH(:)
      
      ! ------------------
-     ! information on network branches
+     ! information on network branches (EDGES)
      ! ------------------
      INTEGER :: NEDGE ! Number of branches
      ! nodes at the start and end of each branch
@@ -47,6 +47,8 @@ MODULE NETWORKUTIL
      ! negative values for going around the edge backward
      INTEGER :: NLOOP, MAXLOOPLEN
      INTEGER, POINTER :: LOOPEDGES(:,:), LOOPLENS(:)
+     ! radius of each network edge
+     DOUBLE PRECISION :: EDGERAD(:)
      
      ! -------------
      ! Map nodes and edges to a mesh object     
@@ -330,7 +332,7 @@ CONTAINS
          & MAXLOOPLEN, DORESERVOIRS, NFIELD, RANDFIXNODES,&
          & NODEVOL,RESVVOL, RESVSA,RESVLEN,FIXEDGEVEL,FIXEDGEVELVAL,&
          & NFIXEDGEVEL, FIXNODES, FIXVALS, NFIX, &
-         & FIXNODEFROMNETFILE, NETWORKDIM
+         & FIXNODEFROMNETFILE, NETWORKDIM,USEVARRAD
     
     USE GENUTIL, ONLY : NORMALIZE
     ! Set up (allocate) a network structure, reading in connectivity and
@@ -476,7 +478,12 @@ CONTAINS
               CALL READF (NETP%EDGELEN(EID))
               EDGELENSET(EID) = .TRUE.
            ENDIF
-           
+           IF (USEVARRAD.AND.NITEMS.GT.5) THEN ! read in edge radius directly
+              CALL READF (NETP%EDGERAD(EID))
+           ELSE
+              NETP%EDGERAD(EID) = sqrt(1/pi) ! default to unit area
+           ENDIF
+              
            IF (NODE1.LT.1.OR.NODE2.LT.1.OR.EID.LT.1&
                 & .OR.NODE1.GT.NNODE.OR.NODE2.GT.NNODE.OR.EID.GT.NEDGE) THEN
               PRINT*, 'ERROR IN NETWORK FROM FILE: &
@@ -615,6 +622,7 @@ CONTAINS
      ! set all nodes to default volume
      ! Volume is actually in terms of tubule length (ie NODEVOL = V/(pi*a^2))
      ! where a is the tube radius
+     ! Unless using VARRAD, in which case volume is actual volume
      NETP%NODEVOLS = NODEVOL
 
      ! set up edges with fixed velocities      
@@ -681,7 +689,7 @@ CONTAINS
        IF (PRESENT(EDGEVAL)) THEN
           WRITE(FU,'(A,1X,I6,1X,I5,1X,I5,2F20.10)') 'EDGE ', EC, NETP%EDGENODE(EC,:), NETP%EDGELEN(EC),EDGEVAL(EC)
        ELSE
-          WRITE(FU,'(A,1X,I6,1X,I5,1X,I5,F20.10)') 'EDGE ', EC, NETP%EDGENODE(EC,:), NETP%EDGELEN(EC)
+          WRITE(FU,'(A,1X,I6,1X,I5,1X,I5,2F20.10)') 'EDGE ', EC, NETP%EDGENODE(EC,:), NETP%EDGELEN(EC),NETP%EDGERAD(EC)
        END IF
 
        IF (NETP%EDGENODE(EC,1).EQ.NETP%EDGENODE(EC,2)) THEN
@@ -733,7 +741,7 @@ CONTAINS
     
     ! allocate branch data
     ALLOCATE(NETP%EDGENODE(NEDGE,2), NETP%EDGESTART(NEDGE,DIM),&
-         & NETP%EDGEDIR(NEDGE,DIM), NETP%EDGELEN(NEDGE))
+         & NETP%EDGEDIR(NEDGE,DIM), NETP%EDGELEN(NEDGE), NETP%EDGERAD(NEDGE))
     ! allocate loop data
     ALLOCATE(NETP%LOOPEDGES(NETP%NLOOP,MAXLOOPLEN), NETP%LOOPLENS(NETP%NLOOP))
     
@@ -820,7 +828,7 @@ CONTAINS
        DEALLOCATE(NETP%NODENODE, NETP%NODEEDGE, NETP%NODEPOS, NETP%NODELEN, &
             & NETP%NODEDEG, NETP%NODEABS,NETP%NODEWIDTH)
 !       DEALLOCATE(NETP%NODEFIX, NETP%NODEFIXVAL)
-       DEALLOCATE(NETP%EDGENODE, NETP%EDGESTART, NETP%EDGEDIR, NETP%EDGELEN)
+       DEALLOCATE(NETP%EDGENODE, NETP%EDGESTART, NETP%EDGEDIR, NETP%EDGELEN,NETP%EDGERAD)
        DEALLOCATE(NETP%LOOPEDGES,NETP%LOOPLENS)
        DEALLOCATE(NETP%NODESTATE, NETP%NODEVOLS)
        IF (NETP%CONTSET) THEN
