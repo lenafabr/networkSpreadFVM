@@ -40,6 +40,9 @@ MODULE DYNSYSUTIL
      ! arrays have been allocated
      LOGICAL :: ARRAYSET = .FALSE.
 
+     ! use varying radii for mesh elements
+     LOGICAL :: VARRAD = .FALSE.
+     
      ! parameters have been set
      LOGICAL :: PARAMSET = .FALSE.
 
@@ -372,7 +375,7 @@ CONTAINS
          & ACTNEARNODEDIST, DEPRATE, PERMNEARNODEDIST, FIXRECTANGLE, &
          & ALLOWFIXEDRESV, DORESERVOIRS, ALLOWRESVFIX, &
          & NFIXCELL, RANDFIXCELLS,FIXCELLS, RANDFIXPTS,FIXPTS,NFIXPT,FIXPTCENT,&
-         & FIXPTRAD, MAXNABSORBER, NPERMPOS,PERMPOS,POSPERMEABILITY
+         & FIXPTRAD, MAXNABSORBER, NPERMPOS,PERMPOS,POSPERMEABILITY, USEVARRAD
     USE NETWORKUTIL, ONLY : NETWORK
     USE GENUTIL, ONLY : RANDSELECT_INT
     USE MT19937, ONLY : RANDUNIFCIRCLE
@@ -732,7 +735,7 @@ CONTAINS
     END IF
     
     PRINT*, 'TRACKFLUXPERM:', TRACKFLUXPERM
-
+    
     IF (USEPERMPREFACTOR) THEN
        ! the provided permeability is actually a prefactor that should
        ! be multiplied by mesh cell length (actually [surface area/(2*pi*a)])
@@ -757,7 +760,9 @@ CONTAINS
           END SELECT
        ENDIF
     ENDDO
-END SUBROUTINE SETPARAMDYNSYS
+
+    DSP%VARRAD = USEVARRAD
+  END SUBROUTINE SETPARAMDYNSYS
   
   SUBROUTINE SETUPDYNSYS(DSP,MESHP,NFIELD)
     ! allocate all the arrays for a dynamical system

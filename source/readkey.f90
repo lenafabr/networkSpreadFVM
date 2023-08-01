@@ -214,6 +214,12 @@ SUBROUTINE READKEY
   ! global depletion rate
   DEPRATE = 0D0
 
+  ! allow for variable radii of mesh elements
+  USEVARRAD = .FALSE.
+  ! parameters for randomizing edge radii
+  EDGERADRANDTYPE = 'NONE'
+  EDGERADRANDPARAMS = 0
+  
   ! if positive, predefines a network dimension
   ! otherwise, dimension set to # items in NODE row of network file - 2
   NETWORKDIM = 0
@@ -353,6 +359,11 @@ SUBROUTINE READKEY
            ENDDO
         CASE('DELT')
            CALL READF(DELT)
+        CASE('EDGERADRAND')
+           CALL READA(EDGERADRANDTYPE,1)
+           DO I = 1,MIN(NITEMS-2,10)
+              CALL READF(EDGERADRANDPARAMS(I))
+           ENDDO
         CASE('FASTEQUIL')
            IF (NITEMS.GT.1) THEN
               CALL READO(FASTEQUIL)
@@ -621,6 +632,12 @@ SUBROUTINE READKEY
            ELSE
               USEPERMPREFACTOR = .TRUE.
            ENDIF
+        CASE('USEVARRAD')
+           IF (NITEMS.GT.1) THEN
+              CALL READO(USEVARRAD)
+           ELSE
+              USEVARRAD = .TRUE.
+           ENDIF
         CASE('VELCONTROL')
            CALL READA(VELCONTROL, CASESET=1)
         CASE('VERBOSE')
@@ -735,7 +752,11 @@ SUBROUTINE READKEY
      ELSE
         PRINT*, 'Dumping snapshot every', SNAPSHOTEVERY,'steps. In file:', TRIM(ADJUSTL(SNAPSHOTFILE))
      ENDIF
-  ENDIF    
+  ENDIF
+  IF (USEVARRAD) THEN
+     PRINT*, 'Allowing for variable mesh cell radii'
+     PRINT*, 'EDGERADRAND: ', EDGERADRANDTYPE, EDGERADRANDPARAMS
+  ENDIF
   print*, '----------------------------------------------------'
 
 END SUBROUTINE READKEY

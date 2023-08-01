@@ -1,6 +1,8 @@
 MODULE MESHUTIL
   ! utilities for dealing with a cell-centered mesh on a network
   USE NETWORKUTIL, ONLY : NETWORK
+  USE GENUTIL, ONLY : PI
+  
   IMPLICIT NONE
 
   TYPE MESH
@@ -22,7 +24,8 @@ MODULE MESHUTIL
      ! LENPM: length to the center of each adjacent cell (h_plus, h_minus in the math notes motation)
      ! RAD: radius for each mesh cell
      ! NOTE: radius is only used if USEVARRAD keyword is on
-     DOUBLE PRECISION, POINTER :: POS(:,:), LEN(:), LENPM(:,:), VOL(:), SA(:), RAD
+     DOUBLE PRECISION, POINTER :: POS(:,:), LEN(:), LENPM(:,:), VOL(:)
+     DOUBLE PRECISION, POINTER :: SA(:), RAD(:)
      ! number of neighbors for each cell
      INTEGER, POINTER :: DEG(:)
      ! for each edge (boundary) of the cell, list the type of boundary
@@ -556,7 +559,7 @@ CONTAINS
     ENDDO
 
     ! default mesh cell radius
-    MESHP%RAD = TUBERAD
+    MESHP%RAD = SQRT(1D0/PI)
     
     MESHP%CELLSET = .TRUE.
     NETP%MESHSET = .TRUE.    
@@ -615,7 +618,7 @@ CONTAINS
           ENDDO
           MESHP%RAD(CC) = TOTRAD/NETP%NODEDEG(NC)
        CASE (1) ! edge cell
-          EC = MESHP%EDGEIND(CC)
+          EC = MESHP%EDGEIND(CC,1)
           MESHP%RAD(CC) = NETP%EDGERAD(EC)
        CASE (2) ! reservoir cell
           RC = MESHP%RESVIND(CC)

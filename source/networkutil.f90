@@ -1,7 +1,8 @@
 MODULE NETWORKUTIL
   ! Utilities for dealing with connectivity and geometry of a network
   ! including defining, manipulating, input/output
-
+  USE GENUTIL, ONLY : PI
+  
   IMPLICIT NONE
   
   TYPE NETWORK
@@ -48,7 +49,7 @@ MODULE NETWORKUTIL
      INTEGER :: NLOOP, MAXLOOPLEN
      INTEGER, POINTER :: LOOPEDGES(:,:), LOOPLENS(:)
      ! radius of each network edge
-     DOUBLE PRECISION :: EDGERAD(:)
+     DOUBLE PRECISION, POINTER :: EDGERAD(:)
      
      ! -------------
      ! Map nodes and edges to a mesh object     
@@ -325,7 +326,34 @@ CONTAINS
     
   ! END SUBROUTINE SETUPFIXNODES
 
-  
+  SUBROUTINE SETRANDOMEDGERAD(NETP,RANDTYPE,PARAMS)
+    ! Assign random value for the radius of each edge
+    ! RANDTYPE = type of distribution to use
+    ! PARAMS = parameters defining the distribution
+    ! Available districts:
+    ! UNIFORM
+    !    params= [min, max]
+    USE GENUTIL,ONLY : GRND
+    IMPLICIT NONE
+    TYPE(NETWORK), POINTER :: NETP
+    CHARACTER(LEN=*) :: RANDTYPE
+    DOUBLE PRECISION :: PARAMS(:)
+    DOUBLE PRECISION :: U, MIN, MAX
+    INTEGER :: EC
+    
+    SELECT CASE (RANDTYPE)
+    CASE('UNIFORM')
+       MIN = PARAMS(1); MAX = PARAMS(2)
+       DO EC= 1,NETP%NEDGE
+          U = GRND()
+          NETP%EDGERAD(EC) = (MAX-MIN)*U+MIN
+       ENDDO
+    CASE DEFAULT
+       PRINT*, 'RANDTYPE for selecting edge radii is invalid:', RANDTYPE
+       STOP 1
+    END SELECT
+  END SUBROUTINE SETRANDOMEDGERAD
+
   SUBROUTINE NETWORKFROMFILE(NETP,NETFILE)
     USE INPUTPARAMS, ONLY : READLINE, READA, READF, READI
     USE KEYS, ONLY : MAXBRANCH,  NABS, ABSORBERS, &
