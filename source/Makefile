@@ -1,6 +1,6 @@
 #OBJS = keys.o readkey.o genutil.o mt19937.o inputparams.o networkutil.o  sort2int.o meshutil.o meshdynamics.o flowutil.o contractutil.o gmresutil.o dgmres.o zgmres.o
 
-OBJS = keys.o readkey.o genutil.o mt19937.o inputparams.o networkutil.o  sort2int.o meshutil.o dynsysutil.o fvmdynamics.o nodecontractutil.o flowutil.o
+OBJS = keys.o readkey.o genutil.o mt19937.o inputparams.o networkutil.o  sort2int.o meshutil.o dynsysutil.o fvmdynamics.o nodecontractutil.o flowutil.o resvutil.o
 
 FC = gfortran
 FLAGS = -O3 
@@ -50,7 +50,7 @@ veryclean: clean
 readkey.o: inputparams.o keys.o genutil.o mt19937.o
 genutil.o: mt19937.o
 networkutil.o: keys.o genutil.o
-meshutil.o: networkutil.o
+meshutil.o: networkutil.o resvutil.o
 dynsysutil.o: meshutil.o keys.o
 fvmdynamics.o: dynsysutil.o networkutil.o nodecontractutil.o keys.o
 nodecontractutil.o: meshutil.o dynsysutil.o networkutil.o flowutil.o

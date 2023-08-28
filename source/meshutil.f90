@@ -4,7 +4,7 @@ MODULE MESHUTIL
   USE GENUTIL, ONLY : PI
   
   IMPLICIT NONE
-
+  
   TYPE MESH
      ! object defining the mesh
 
@@ -402,13 +402,17 @@ CONTAINS
        STOP 1
     ENDIF
 
-    ! set up connectivity for reservoirs
+    ! set up connectivity for reservoirs defined implicitly in the network
     DO RC = 1,NETP%NRESV
+       ! mesh cell belonging to this reservoir
        CT = NETP%RESVCELLS(RC)
 
        ! Cells bordering the reservoir
        DO CC = 1,NETP%RESVNNODE(RC)
+          ! node belonging to this reservoir
           NC = NETP%RESVNODES(RC,CC)
+
+          ! which network node connects to this reservoir mesh cell
           MESHP%TERMNODE(CT,CC) = NC
           
           IF (NETP%NODECELLS(NC).EQ.0) THEN
@@ -591,8 +595,8 @@ CONTAINS
           ENDIF
        ENDDO
     ENDDO
-  END SUBROUTINE SETUPNETWORKMESH
-
+  END SUBROUTINE SETUPNETWORKMESH  
+  
   SUBROUTINE SETMESHRADII(MESHP,NETP)
     ! Set up radii for each mesh cell.
     ! Also change volume of each non-reservoir mesh cell to be in terms of actual volume units.
