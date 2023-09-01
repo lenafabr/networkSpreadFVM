@@ -375,7 +375,8 @@ CONTAINS
          & ACTNEARNODEDIST, DEPRATE, PERMNEARNODEDIST, FIXRECTANGLE, &
          & ALLOWFIXEDRESV, DORESERVOIRS, ALLOWRESVFIX, &
          & NFIXCELL, RANDFIXCELLS,FIXCELLS, RANDFIXPTS,FIXPTS,NFIXPT,FIXPTCENT,&
-         & FIXPTRAD, MAXNABSORBER, NPERMPOS,PERMPOS,POSPERMEABILITY, USEVARRAD
+         & FIXPTRAD, MAXNABSORBER, MAXNFIELD,NPERMPOS,PERMPOS,POSPERMEABILITY, USEVARRAD, &
+         & RANDFIXRESV
     USE NETWORKUTIL, ONLY : NETWORK
     USE GENUTIL, ONLY : RANDSELECT_INT
     USE MT19937, ONLY : RANDUNIFCIRCLE
@@ -390,7 +391,9 @@ CONTAINS
     DOUBLE PRECISION :: DIST, MINX, MINY, MAXX, MAXY, POS(NETP%DIM)
     DOUBLE PRECISION :: WEIGHTS(DSP%MESHP%NCELL), COORDS(MAXNABSORBER,2)
     DOUBLE PRECISION :: DIFFS(DSP%MESHP%NCELL,2), DISTS(DSP%MESHP%NCELL)
-    INTEGER :: TMPARR(1)
+    INTEGER :: TMPARR(1), FIXRESV(MAXNABSORBER,MAXNFIELD)
+
+    FIXRESV = 0
     
     IF (NACT.GT.0) THEN
        DSP%DOACTIVATION = .TRUE.
@@ -402,9 +405,11 @@ CONTAINS
        ! allow reservoirs to be fixed except the ones explicitly excluded
        CT = 0
        DO NC = 1,NETP%NNODE
-          IF (ALLOWRESVFIX(NETP%NODERESV(NC))) THEN
-             CT = CT+1
-             NODELIST(CT) = NC
+          IF (NETP%NODERESV(NC).GT.0) THEN ! this node is attached to a reservoir
+             IF (ALLOWRESVFIX(NETP%NODERESV(NC))) THEN ! that reservoir can be fixed
+                CT = CT+1
+                NODELIST(CT) = NC
+             ENDIF
           ENDIF
        ENDDO
        NODEAVAIL = CT
@@ -522,8 +527,18 @@ CONTAINS
           PRINT*, 'Field ', FC, NFIX(FC), ' fixed nodes:', FIXNODES(1:NFIX(FC),FC)
        ENDDO
     ENDIF
-
-
+    
+    
+    IF (RANDFIXRESV) THEN
+       ! randomly select (without replacement) reservoirs to be fixed (excluding those that are not allowed to be fixed
+       DO FC = 1,DSP%NFIELD
+          CALL RANDSELECT_INT( PACK((/(RC, RC=1,NETP%NRESV)/),ALLOWRESVFIX(1:NETP%NRESV)), &
+               & NFIX(FC),.FALSE.,FIXRESV(1:NFIX(FC),FC),TMP)
+          PRINT*, 'Field ', FC, NFIX(FC), ' fixed reservoirs:', FIXRESV(1:NFIX(FC),FC)
+          
+       ENDDO
+    END IF
+    
     ! fix the cells corresponding to the fixed network nodes
     DO CC = 1,MESHP%NCELL
        IF (MESHP%CELLTYPE(CC).EQ.0) THEN
@@ -560,14 +575,16 @@ CONTAINS
        ELSEIF (MESHP%CELLTYPE(CC).EQ.2) THEN
          
           
-          ! reservoir cell, fix if any attached node is in the fix list
+          ! reservoir cell
           Rc = MESHP%RESVIND(CC)          
           DO FC = 1,DSP%NFIELD
+
+             ! fix if any attached node is in the fix list
              DO CT= 1,NETP%RESVNNODE(RC)
                 NC = NETP%RESVNODES(RC,CT)
 
                 DO CT2 = 1,NFIX(FC)
-                   IF (FIXNODES(CT2,FC).EQ.NC) THEN                     
+                   IF (FIXNODES(CT2,FC).EQ.NC) THEN
                       IF (.NOT.ALLOWFIXEDRESV.and.DORESERVOIRS) THEN
                          PRINT*, 'ERROR IN SETTING UP FIXED NODES: reservoir fixed nodes not allowed'
                          STOP 1
@@ -578,9 +595,18 @@ CONTAINS
                       DSP%FIXVALS(CC,FC) = FIXVALS(CT2,FC)
                       EXIT
                    ENDIF
-                ENDDO
-                
+                ENDDO                
              ENDDO
+
+             ! also fix if the reservoir itself is in the fix list
+             IF (ALLOWFIXEDRESV) THEN
+                DO CT = 1,NFIX(FC)
+                   IF (FIXRESV(CT,FC).EQ.RC) THEN                     
+                      DSP%ISFIXED(CC,FC)=.TRUE.
+                      DSP%FIXVALS(CC,FC) = FIXVALS(CT,FC)
+                   ENDIF
+                ENDDO
+             ENDIF
           ENDDO
        ENDIF
     ENDDO

@@ -1,6 +1,7 @@
 MODULE MESHUTIL
   ! utilities for dealing with a cell-centered mesh on a network
   USE NETWORKUTIL, ONLY : NETWORK
+  USE RESVUTIL, ONLY : RESERVOIRS
   USE GENUTIL, ONLY : PI
   
   IMPLICIT NONE
@@ -128,7 +129,7 @@ CONTAINS
     PRINT*, 'Closed N boundaries out of total:', NCLOSE, NTOT/2, PTRY, PCLOSE
   END SUBROUTINE CLOSEBOUNDS
   
-  SUBROUTINE SETUPNETWORKMESH(MESHP,NETP,MAXCELLLEN,MINNCELL)
+  SUBROUTINE SETUPNETWORKMESH(MESHP,NETP,MAXCELLLEN,MINNCELL,RESVP)
     IMPLICIT NONE
     ! using a network object, set up a mesh on it for FVM simulations
     ! * CELL-CENTERED mesh. Same distance from cell position to each boundary *
@@ -137,11 +138,14 @@ CONTAINS
     ! MAXCELLLEN: maximum tube length in a cell
     ! MINNCELL: minimum number of internal cells on an edge; does not include nodal cells
     ! this subroutine allocates all arrays, including the mapping from network to mesh indices
-    ! Does NOT set diffusivity of velocities on the mesh
+    ! Does NOT set diffusivity or velocities on the mesh
     ! Network object must be fully set up already
+    ! OPTIONAL: RESVP input is a pointer to a reservoirs object desribing interconnected
+    ! reservoir elements to be included in the mesh
     
     TYPE(MESH), POINTER :: MESHP
     TYPE(NETWORK), POINTER :: NETP
+    TYPE(RESERVOIRS), POINTER, OPTIONAL :: RESVP
     DOUBLE PRECISION, INTENT(IN) :: MAXCELLLEN
     INTEGER, INTENT(IN) :: MINNCELL
     

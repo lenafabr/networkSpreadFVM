@@ -103,6 +103,8 @@ SUBROUTINE READKEY
   
   ! randomly pick some number of network nodes to fix
   RANDFIXNODES = .FALSE.
+  ! randomly pick reservoirs to fix
+  RANDFIXRESV = .FALSE.
   ! randomly pick some number of mesh cells to fix
   RANDFIXCELLS = .FALSE.
   ! Randomly pick points in a circle and fix mesh cells nearest them
@@ -226,6 +228,10 @@ SUBROUTINE READKEY
 
   ! only output the total flux (not individual nodes)
   OUTPUTTOTFLUXONLY = .FALSE.
+
+  ! input reservoir elements from file
+  USERESVELEMENTS = .FALSE.
+  RESVELEMENTFILE = '*.resv.txt'
   
   ! -------------------------
   ! Read in all parameter files, starting with the ones specified on command line
@@ -500,6 +506,7 @@ SUBROUTINE READKEY
            FIXVALS(:,FC) = TMP
         CASE('RANDFIXNODES')
            RANDFIXNODES = .TRUE.
+           RANDFIXRESV = .FALSE.
            CALL READI(FC) ! which field is this for
            CALL READI(NFIX(FC)) ! how many nodes to fix?
            CALL READF(TMP) ! What value to fix to
@@ -514,6 +521,13 @@ SUBROUTINE READKEY
            IF (NITEMS.GT.5) THEN ! center of circle
               CALL READF(FIXPTCENT(1)); CALL READF(FIXPTCENT(2))
            ENDIF
+        CASE('RANDFIXRESV')
+           RANDFIXRESV = .TRUE.
+           RANDFIXNODES = .FALSE.
+           CALL READI(FC) ! which field is this for
+           CALL READI(NFIX(FC)) ! how many reservoirs to fix?
+           CALL READF(TMP) ! What value to fix to
+           FIXVALS(:,FC) = TMP
         CASE('RANDPERMNODES')
            RANDPERMNODES = .TRUE.
            CALL READI(NPERM)
@@ -524,6 +538,9 @@ SUBROUTINE READKEY
            DO I = 1,NITEMS-2
               CALL READF(PERMEABILITY(1,I))
            ENDDO
+        CASE('RESVELEMENTS')
+           USERESVELEMENTS = .TRUE.
+           CALL READA(RESVELEMENTFILE)
         CASE('RESVFILE')
            CALL READA(RESVFILE)
         CASE('RESVINFO')
