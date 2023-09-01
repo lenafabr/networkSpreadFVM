@@ -376,7 +376,7 @@ CONTAINS
          & ALLOWFIXEDRESV, DORESERVOIRS, ALLOWRESVFIX, &
          & NFIXCELL, RANDFIXCELLS,FIXCELLS, RANDFIXPTS,FIXPTS,NFIXPT,FIXPTCENT,&
          & FIXPTRAD, MAXNABSORBER, MAXNFIELD,NPERMPOS,PERMPOS,POSPERMEABILITY, USEVARRAD, &
-         & RANDFIXRESV
+         & RANDFIXRESV, FIXPTMAXDIST
     USE NETWORKUTIL, ONLY : NETWORK
     USE GENUTIL, ONLY : RANDSELECT_INT
     USE MT19937, ONLY : RANDUNIFCIRCLE
@@ -392,7 +392,8 @@ CONTAINS
     DOUBLE PRECISION :: WEIGHTS(DSP%MESHP%NCELL), COORDS(MAXNABSORBER,2)
     DOUBLE PRECISION :: DIFFS(DSP%MESHP%NCELL,2), DISTS(DSP%MESHP%NCELL)
     INTEGER :: TMPARR(1), FIXRESV(MAXNABSORBER,MAXNFIELD)
-
+    LOGICAL :: SUCCESS
+    
     FIXRESV = 0
     
     IF (NACT.GT.0) THEN
@@ -481,18 +482,41 @@ CONTAINS
        DO FC = 1,DSP%NFIELD
           ! select points in the circle
           COORDS(1:NFIXPT(FC),:) = RANDUNIFCIRCLE(NFIXPT(FC),FIXPTCENT,FIXPTRAD)
-
+          
           DO CC = 1,NFIXPT(FC)
-             ! find the nearest mesh cell
-             DO I = 1,2
-                DIFFS(:,I) = COORDS(CC,I) -  MESHP%POS(:,I)
+             SUCCESS = .FALSE.
+
+             DO WHILE (.NOT.SUCCESS) ! keep trying until we get a good sample
+                ! find the nearest mesh cell             
+                DO I = 1,2
+                   DIFFS(:,I) = COORDS(CC,I) -  MESHP%POS(:,I)
+                ENDDO
+                DISTS = SUM(DIFFS**2,2)
+                TMPARR = MINLOC(DISTS)             
+
+                ! CHECK: did we successfully sample?
+                IF (MESHP%CELLTYPE(TMPARR(1)).EQ.2.AND..NOT.ALLOWFIXEDRESV) THEN
+                   ! nearest point is a reservoir mesh cell, not allowed to be fixed
+                   SUCCESS = .FALSE.
+                ELSEIF (DISTS(TMPARR(1)).GT.FIXPTMAXDIST**2) THEN
+                   ! nearest mesh cell is too far
+                   SUCCESS = .FALSE.
+                ELSE
+                   SUCCESS = .TRUE.
+                ENDIF
+
+                IF (.NOT.SUCCESS) THEN ! try sampling again
+                   COORDS(CC:CC,:) = RANDUNIFCIRCLE(1,FIXPTCENT,FIXPTRAD)          
+                ENDIF
              ENDDO
-             DISTS = SUM(DIFFS**2,2)
-             TMPARR = MINLOC(DISTS)
+
              FIXCELLS(CC,FC) = TMPARR(1)
+
              ! set it as fixed
              DSP%ISFIXED(FIXCELLS(CC,FC),FC) = .TRUE.
              DSP%FIXVALS(FIXCELLS(CC,FC),FC) = FIXVALS(CC,FC)
+
+             PRINT*, 'Fixed cell in position: ', FC, CC, FIXCELLS(CC,FC), MESHP%POS(CC,:)
           ENDDO
        END DO
     END IF

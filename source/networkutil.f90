@@ -360,7 +360,7 @@ CONTAINS
          & MAXLOOPLEN, DORESERVOIRS, NFIELD, RANDFIXNODES,&
          & NODEVOL,RESVVOL, RESVSA,RESVLEN,FIXEDGEVEL,FIXEDGEVELVAL,&
          & NFIXEDGEVEL, FIXNODES, FIXVALS, NFIX, &
-         & FIXNODEFROMNETFILE, NETWORKDIM,USEVARRAD
+         & FIXNODEFROMNETFILE, NETWORKDIM,USEVARRAD, VERBOSE
     
     USE GENUTIL, ONLY : NORMALIZE
     ! Set up (allocate) a network structure, reading in connectivity and
@@ -635,7 +635,8 @@ CONTAINS
      ENDDO
 
      PRINT*, 'Reservoir nodes:', NETP%NRESV
-     DO RC = 1,NETP%NRESV
+     ! only print the nodes for the first few reservoirs
+     DO RC = 1,MIN(NETP%NRESV,3)
         PRINT*, RC, NETP%RESVNNODE(RC),NETP%RESVNODES(RC,1:NETP%RESVNNODE(RC))
         IF (NETP%RESVNNODE(RC).LT.1) THEN
            PRINT*, 'ERROR: reservoir with no nodes', RC

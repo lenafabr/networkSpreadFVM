@@ -100,6 +100,9 @@ SUBROUTINE READKEY
 
   ! Where to pick points in a circle
   FIXPTCENT = 0D0; FIXPTRAD = 1D0
+
+  ! maximum allowed distance from picked point to a node
+  FIXPTMAXDIST = 1D5
   
   ! randomly pick some number of network nodes to fix
   RANDFIXNODES = .FALSE.
@@ -520,6 +523,11 @@ SUBROUTINE READKEY
            CALL READF(FIXPTRAD) ! radius of circle in which to pick points
            IF (NITEMS.GT.5) THEN ! center of circle
               CALL READF(FIXPTCENT(1)); CALL READF(FIXPTCENT(2))
+           ENDIF
+           IF (NITEMS.GT.6) THEN
+              ! if selected point is more than this distance from a fixable
+              ! mesh cell, then ignore and pick another point
+              CALL READF(FIXPTMAXDIST)
            ENDIF
         CASE('RANDFIXRESV')
            RANDFIXRESV = .TRUE.
