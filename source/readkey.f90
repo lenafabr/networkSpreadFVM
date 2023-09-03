@@ -524,11 +524,17 @@ SUBROUTINE READKEY
            IF (NITEMS.GT.5) THEN ! center of circle
               CALL READF(FIXPTCENT(1)); CALL READF(FIXPTCENT(2))
            ENDIF
-           IF (NITEMS.GT.6) THEN
+           IF (NITEMS.GT.7) THEN
               ! if selected point is more than this distance from a fixable
               ! mesh cell, then ignore and pick another point
               CALL READF(FIXPTMAXDIST)
            ENDIF
+        CASE('RANDFIXPTSEXCLUDE')
+           ! exclude a circular region from randomly selected fixed points
+           CALL READF(FIXPTEXRAD)
+           DO I = 1,MIN(NITEMS-2,3)
+              CALL READF(FIXPTEXCENT(I))
+           ENDDO
         CASE('RANDFIXRESV')
            RANDFIXRESV = .TRUE.
            RANDFIXNODES = .FALSE.
