@@ -522,7 +522,7 @@ CONTAINS
              DSP%ISFIXED(FIXCELLS(CC,FC),FC) = .TRUE.
              DSP%FIXVALS(FIXCELLS(CC,FC),FC) = FIXVALS(CC,FC)
 
-             PRINT*, 'Fixed cell in position: ', FC, CC, FIXCELLS(CC,FC), MESHP%POS(CC,:)
+             PRINT*, 'Fixed cell in position: ', FC, CC, FIXCELLS(CC,FC), MESHP%POS(TMPARR(1),:)
           ENDDO
        END DO
     END IF
