@@ -584,8 +584,34 @@ CONTAINS
           IF (BC.GT.0) THEN
              IF (MESHP%BOUNDCLOSED(CC,BCT)) CYCLE ! this boundary is closed off
 
-             IF (DSP%VARRAD) THEN
+             IF (DSP%CONC3D) THEN
+                ! using meshed reservoir elements, work entirely with 3D concentrations
+                ! scaling factor for diffusivity
+                ! Only for boundaries along an edge, only if using varrad
+                IF (DSP%VARRAD.AND.MESHP%CELLTYPE(CC).EQ.1.AND.MESHP%CELLTYPE(BC).EQ.1) THEN
+                   DR = MESHP%RAD(BC)-MESHP%RAD(CC)
+                   DSCL = SQRT(1 + (DR/MESHP%LENPM(CC,BCT))**2)
+                ELSE
+                   DSCL = 1D0
+                ENDIF
+                
+                ! area of cell boundary
+                ABOUND = MESHP%BOUNDAREA(CC,BCT)
+
+                ! flux for total ligand
+                FLUXDIFF(1) = FLUXDIFF(1) &
+                     & + DSP%DCOEFF(1)/DSCL*ABOUND*(DSP%FIELDS(BC,1) &
+                     & - DSP%FIELDS(CC,1))/MESHP%LENPM(CC,BCt) &
+                     & + DSP%DCOEFF(2)/DSCL*ABOUND*(BFIELD(BC) - BFIELD(CC))/MESHP%LENPM(CC,BCT)
+
+                ! flux for total protein
+                FLUXDIFF(2) = FLUXDIFF(2) + &
+                     & DSP%DCOEFF(2)/DSCL*ABOUND*&
+                     & (DSP%FIELDS(BC,2) - DSP%FIELDS(CC,2))/MESHP%LENPM(CC,BCT)
+                
+             ELSEIF (DSP%VARRAD) THEN
                 ! mesh cells can have varying radii
+                ! but still working with 1D concentrations
                 ! flux across boundary = D(x) A(x) d/dx[C/A]
                 ! D(x) = D0/sqrt(1+R'^2)
 
@@ -595,6 +621,7 @@ CONTAINS
                 ! areas in the two membrane cell, and average at boundary
                 A1 = PI*MESHP%RAD(BC)**2; A2 = PI*MESHP%RAD(CC)**2
                 ABOUND = (A1 + A2)/2
+                !ABOUND = MESHP%BOUNDAREA(CC,BCT)
                 
                 ! flux for total ligand
                 FLUXDIFF(1) = FLUXDIFF(1) &
@@ -610,9 +637,10 @@ CONTAINS
                 ! flux across each boundary defined as
                 ! D*(w_(j+1)-w_j)/h+
                 ! get diffusive flux of TOTAL LIGAND
+
                 FLUXDIFF(1) = FLUXDIFF(1) &
                      & + DSP%DCOEFF(1)*(DSP%FIELDS(BC,1) - DSP%FIELDS(CC,1))/MESHP%LENPM(CC,BCt) &
-                     & + DSP%DCOEFF(2)*(BFIELD(BC) - BFIELD(CC))/MESHP%LENPM(CC,BCt)
+                     & + DSP%DCOEFF(2)*(BFIELD(BC) - BFIELD(CC))/MESHP%LENPM(CC,BCt)                
 
                 ! get diffusive flux of  total protein 
                 FLUXDIFF(2) = FLUXDIFF(2) + DSP%DCOEFF(2)*(DSP%FIELDS(BC,2) - DSP%FIELDS(CC,2))/MESHP%LENPM(CC,BCt)
@@ -621,42 +649,49 @@ CONTAINS
        ENDDO
 
        ! Advective flux: via Lax-Wendroff discretization
-       ! WARNING: this has not been thoroughly thought through for the case where there are flows
-       ! going across boundaries to large reservoirs!
+       ! WARNING: flows are not set up with reservoir elements or with varrad
        FLUXADV = 0D0
-       DO BCT = 1,DEG
-          ! approximate field values on boundary after half a timestep
-          ! positive bounddir means + velocities point out from this cell
-          BC = MESHP%BOUNDS(CC,BCT) ! boundary cell
-          
-          IF (BC.GT.0) THEN
-             IF (MESHP%BOUNDCLOSED(CC,BCT)) CYCLE ! this boundary is closed off
-             
-             ! TOTAL ligand
-             ! Weighted average of field on boundary
-             IF (.NOT.DSP%MOBILEFIELD(2)) THEN ! immobile proteins, only free ligand feels flow
-                WAVG(1) = (MESHP%LEN(BC)/MESHP%DEG(BC)*DSP%FIELDS(CC,1) &
-                     & + MESHP%LEN(CC)/MESHP%DEG(CC)*DSP%FIELDS(BC,1))/MESHP%LENPM(CC,BCT)
-                WSHIFT(1) = WAVG(1) - DELT/2/MESHP%LENPM(CC,BCT)*DSP%VEL(CC,BCT)*MESHP%BOUNDDIR(CC,BCT)&
-                     & *(DSP%FIELDS(BC,1) - DSP%FIELDS(CC,1))
-                WAVG(2) =0D0; WSHIFT(2) = 0D0
-             ELSE
-                WAVG(1) = (MESHP%LEN(BC)/MESHP%DEG(BC)*CFIELD(CC) &
-                     & + MESHP%LEN(CC)/MESHP%DEG(CC)*CFIELD(BC))/MESHP%LENPM(CC,BCT)
-                WSHIFT(1) = WAVG(1) - DELT/2/MESHP%LENPM(CC,BCT)*DSP%VEL(CC,BCT)*MESHP%BOUNDDIR(CC,BCT)*(CFIELD(BC) - CFIELD(CC))
-
-                ! total protein
-                WAVG(2) = (MESHP%LEN(BC)/MESHP%DEG(BC)*DSP%FIELDS(CC,2) &
-                     & + MESHP%LEN(CC)/MESHP%DEG(CC)*DSP%FIELDS(BC,2))/MESHP%LENPM(CC,BCT)
-                WSHIFT(2) = WAVG(2) - &
-                     & DELT/2/MESHP%LENPM(CC,BCT)*DSP%VEL(CC,BCT)*MESHP%BOUNDDIR(CC,BCT)&
-                     & *(DSP%FIELDS(BC,2) - DSP%FIELDS(CC,2))  
-             ENDIF
-            
-             ! advective flux for total ligand and total protein
-             FLUXADV = FLUXADV - MESHP%BOUNDDIR(CC,BCT)*DSP%VEL(CC,BCT)*WSHIFT
+       IF (DSP%USEEDGEFLOW) THEN
+          IF (DSP%VARRAD.OR.DSP%CONC3D) THEN
+             PRINT*, 'USEVARRAD AND CONC3D not set up together with edge flows'
+             STOP 1
           ENDIF
-       ENDDO            
+          ! WARNING: this has not been thoroughly thought through for the case where there are flows
+          ! going across boundaries to large reservoirs!       
+          DO BCT = 1,DEG
+             ! approximate field values on boundary after half a timestep
+             ! positive bounddir means + velocities point out from this cell
+             BC = MESHP%BOUNDS(CC,BCT) ! boundary cell
+
+             IF (BC.GT.0) THEN
+                IF (MESHP%BOUNDCLOSED(CC,BCT)) CYCLE ! this boundary is closed off
+
+                ! TOTAL ligand
+                ! Weighted average of field on boundary
+                IF (.NOT.DSP%MOBILEFIELD(2)) THEN ! immobile proteins, only free ligand feels flow
+                   WAVG(1) = (MESHP%LEN(BC)/MESHP%DEG(BC)*DSP%FIELDS(CC,1) &
+                        & + MESHP%LEN(CC)/MESHP%DEG(CC)*DSP%FIELDS(BC,1))/MESHP%LENPM(CC,BCT)
+                   WSHIFT(1) = WAVG(1) - DELT/2/MESHP%LENPM(CC,BCT)*DSP%VEL(CC,BCT)*MESHP%BOUNDDIR(CC,BCT)&
+                        & *(DSP%FIELDS(BC,1) - DSP%FIELDS(CC,1))
+                   WAVG(2) =0D0; WSHIFT(2) = 0D0
+                ELSE
+                   WAVG(1) = (MESHP%LEN(BC)/MESHP%DEG(BC)*CFIELD(CC) &
+                        & + MESHP%LEN(CC)/MESHP%DEG(CC)*CFIELD(BC))/MESHP%LENPM(CC,BCT)
+                   WSHIFT(1) = WAVG(1) - DELT/2/MESHP%LENPM(CC,BCT)*DSP%VEL(CC,BCT)*MESHP%BOUNDDIR(CC,BCT)*(CFIELD(BC) - CFIELD(CC))
+
+                   ! total protein
+                   WAVG(2) = (MESHP%LEN(BC)/MESHP%DEG(BC)*DSP%FIELDS(CC,2) &
+                        & + MESHP%LEN(CC)/MESHP%DEG(CC)*DSP%FIELDS(BC,2))/MESHP%LENPM(CC,BCT)
+                   WSHIFT(2) = WAVG(2) - &
+                        & DELT/2/MESHP%LENPM(CC,BCT)*DSP%VEL(CC,BCT)*MESHP%BOUNDDIR(CC,BCT)&
+                        & *(DSP%FIELDS(BC,2) - DSP%FIELDS(CC,2))  
+                ENDIF
+
+                ! advective flux for total ligand and total protein
+                FLUXADV = FLUXADV - MESHP%BOUNDDIR(CC,BCT)*DSP%VEL(CC,BCT)*WSHIFT
+             ENDIF
+          ENDDO
+       ENDIF
 
 !       print*, 'TESTX1:', CC, meshp%celltype(cc), meshp%resvind(cc), FLUXDIFF, FLUXADV, MESHP%VOL(CC)
        DFDT(CC,:) = (FLUXDIFF+FLUXADV)/MESHP%VOL(CC)

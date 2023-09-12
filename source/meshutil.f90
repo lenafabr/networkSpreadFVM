@@ -41,6 +41,9 @@ MODULE MESHUTIL
      ! keep track of which boundaries are closed off
      LOGICAL, POINTER :: BOUNDCLOSED(:,:)
 
+     ! cross-sectional area of each boundary between cells
+     DOUBLE PRECISION, POINTER :: BOUNDAREA(:,:)
+
      ! -----------
      ! mapping to a network structure
      ! -----------
@@ -94,7 +97,7 @@ CONTAINS
     IMPLICIT NONE
     TYPE(MESH), POINTER :: MESHP
     DOUBLE PRECISION, INTENT(IN) :: PCLOSE
-    INTEGER :: CC, BC, BCC, BCC2, BC2, NCLOSE, NTOT
+    INTEGER :: CC, BC, BCC, BCC2, BC2, NCLOSE, NTOT, MINCC
     DOUBLE PRECISION :: U, PTRY
 
     ! each boundary will be counted twice for the 2 adjacent mesh cells,
@@ -147,14 +150,14 @@ CONTAINS
     TYPE(NETWORK), POINTER :: NETP
     TYPE(RESERVOIRS), POINTER, OPTIONAL :: RESVP
     DOUBLE PRECISION, INTENT(IN) :: MAXCELLLEN
-    INTEGER, INTENT(IN) :: MINNCELL
+    INTEGER, INTENT(IN) :: MINNCELL    
     
     INTEGER :: EC, NC, CC, CT, N1, N2, D1, D2, BC, RC, bct, CCT
     INTEGER :: NCELL
     DOUBLE PRECISION :: CX1, CX2, ELEN, MINELEN, CELLLEN
     DOUBLE PRECISION :: EDGECELLLEN(NETP%NEDGE), NODECELLLEN(NETP%NNODE)
 
-    INTEGER :: NINTNODES, NCELLTOT, DIM, MAXDEG, INTNODES(NETP%NEDGE,2), ESHORT
+    INTEGER :: NINTNODES, NCELLTOT, DIM, MAXDEG, INTNODES(NETP%NEDGE,2), ESHORT, MINCC
 
     DOUBLE PRECISION :: EXTLEN
     
@@ -251,10 +254,20 @@ CONTAINS
        IF (NETP%NODEDEG(NC).GT.1) NINTNODES = NINTNODES + 1
     ENDDO
 
-    ! each reservoir gets its own cell
-    NCELLTOT = SUM(NETP%EDGENCELL) + NINTNODES + NETP%NRESV
     DIM = NETP%DIM
-    MAXDEG = MAX(MAXVAL(NETP%NODEDEG),MAXVAL(NETP%RESVNNODE))
+    IF (DIM.NE.RESVP%DIM) THEN
+       PRINT*, 'ERROR: network and reservoirs are in different dimensions', DIM, RESVP%DIM
+    ENDIF
+    
+    ! each reservoir gets its own cell
+    IF (PRESENT(RESVP)) THEN
+       ! reservoirs are defined in separate data structures
+       NCELLTOT = SUM(NETP%EDGENCELL) + NINTNODES + RESVP%NRESV
+       MAXDEG = MAX(MAXVAL(NETP%NODEDEG),MAXVAL(NETP%RESVNNODE),MAXVAL(RESVP%RESVDEG))
+    ELSE  
+       NCELLTOT = SUM(NETP%EDGENCELL) + NINTNODES + NETP%NRESV
+       MAXDEG = MAX(MAXVAL(NETP%NODEDEG),MAXVAL(NETP%RESVNNODE))
+    ENDIF
     
     CALL ALLOCATEMESH(MESHP,NCELLTOT,DIM,MAXDEG)
 
@@ -267,16 +280,33 @@ CONTAINS
     MESHP%NODEIND = 0; MESHP%EDGEIND = 0; MESHP%RESVIND = 0
 
     ! ----------
-    ! set up reservoir cells
+    ! set up reservoir cells defined in network file that are NOT defined in reservoir file
     ! ----------
     CT= 0 ! total cell counter
-    
+
+    IF (PRESENT(RESVP)) THEN
+       ! leave space for explicitly defined reservoirs
+       ! WARNING: cannot have connection defined in network file to a reservoir
+       ! defined in the reservoir file
+       CT = RESVP%NRESV
+       MESHP%CELLTYPE(1:CT) = 2
+       MESHP%DEG(1:CT) = 0
+    ENDIF
+
+    ! these are *separate* implicitly defined reservoirs in network file
+    ! set up based on network nodes marked as connecting to reservoir
+    ! This does *not* include connections defined in the explicit reservoir file
     DO RC = 1,NETP%NRESV
+
+       IF (RC.LE.CT) THEN ! this reservoir will be explicitly defined in reservoir file
+          CYCLE
+       ENDIF
+       
        CT = CT+1;
 
        NETP%RESVCELLs(RC) = CT ! map from reservoir to cell
 
-       
+
        MESHP%CELLTYPE(CT) = 2 ! reservoir cell
        MESHP%RESVIND(CT) = RC ! which reservoir it belongs to
 
@@ -285,7 +315,7 @@ CONTAINS
 
        ! surface area of reservoir (in terms of edge length; this is really V/(2*pi*a)
        MESHP%SA(CT) = NETP%RESVSA(RC)
-       
+
        ! number of connected cells
        D1 = NETP%RESVNNODE(RC)
        MESHP%DEG(CT) = D1
@@ -406,6 +436,7 @@ CONTAINS
        STOP 1
     ENDIF
 
+    IF (.NOT.PRESENT(RESVP)) THEN
     ! set up connectivity for reservoirs defined implicitly in the network
     DO RC = 1,NETP%NRESV
        ! mesh cell belonging to this reservoir
@@ -452,6 +483,7 @@ CONTAINS
           ENDIF
        ENDDO       
     ENDDO
+    ENDIF
     
     ! set up connectivity for node cells
     DO NC = 1,NETP%NNODE
@@ -522,32 +554,20 @@ CONTAINS
     ! effective RESVLEN should be:
     ! for spheres: L = pi*r/2 (r = tube radius)
     ! for sheets: L = r^2/h*ln(R/r) (h=sheet thickness, pi*R^2 = A = sheet area)
-    DO CC = 1,MESHP%NCELL
+    IF (PRESENT(RESVP)) THEN
+       MINCC = RESVP%NRESV+1
+    ELSE
+       MINCC = 1
+    ENDIF
+    
+    DO CC = MINCC,MESHP%NCELL
        IF (MESHP%CELLTYPE(CC).EQ.2) THEN ! reservoir cells only
           RC = MESHP%RESVIND(CC) ! which reservoir is this?
           MESHP%LEN(CT) = NETP%RESVLEN(RC)/2*MESHP%DEG(CC)
        ENDIF
     ENDDO
 
-    ! --------------------
-    ! OLD inaccurate calculations
-   !  DO CC = 1,MESHP%NCELL
-!        IF (MESHP%CELLTYPE(CC).EQ.2) THEN
-! !          MESHP%LEN(CC) = MESHP%VOL(CC)
-          
-!           EXTLEN = 0D0; CT = 0
-!           DO BCT = 1,MESHP%DEG(CC) ! look over all boundary cells
-!              BC = MESHP%BOUNDS(CC,BCT)             
-!              IF (BC.GT.0) THEN
-!                 EXTLEN = EXTLEN + MESHP%LEN(BC)/MESHP%DEG(BC)
-!                 CT = CT+1 
-!              ENDIF
-!           ENDDO
-!           ! multiply by degree so that in the LENPM calculation that cancels out
-!           MESHP%LEN(CC) = MESHP%DEG(CC)*EXTLEN/CT                  
-!        ENDIF       
-!     ENDDO
-    ! -----------------------
+   
     
     ! For each cell, get the length to each neighboring cell
     DO CT = 1,MESHP%NCELL
@@ -566,6 +586,14 @@ CONTAINS
        ENDDO
     ENDDO
 
+    IF (PRESENT(RESVP)) THEN
+       ! Update explicit reservoir elements
+       ! this will assume the first NRESV mesh cells are reservoirs
+       CALL RESERVOIRSTOMESH(RESVP,MESHP,NETP)
+    ENDIF
+
+    CALL SETMESHRADII(MESHP,NETP)
+    
     ! default mesh cell radius
     MESHP%RAD = SQRT(1D0/PI)
     
@@ -599,7 +627,159 @@ CONTAINS
           ENDIF
        ENDDO
     ENDDO
+
+    ! DEBUG: check that mesh boundary areas are self-consistent (same from both sides of boundary)
+    PRINT*, 'Testing that mesh boundary areas are self-consistent'
+    DO CC = 1,MESHP%NCELL
+       DO BCT = 1,MESHP%DEG(CC)
+          BC = MESHP%BOUNDS(CC,BCT)
+          IF (BC.EQ.0) CYCLE
+
+          CT =0
+          DO CCT = 1,MESHP%DEG(BC)
+             IF (MESHP%BOUNDS(BC,CCT).EQ.CC) THEN
+                CT = CCT
+                EXIT
+             ENDIF
+          ENDDO
+          
+          IF (ABS(MESHP%BOUNDAREA(CC,BCT) - MESHP%BOUNDAREA(BC,CCT)).GT.1D-10) THEN
+             PRINT*, 'ERROR: boundary area mismatch', CC, BCT, BC, CCT, MESHP%BOUNDAREA(CC,BCT),  MESHP%BOUNDAREA(BC,CCT)
+             STOP 1
+          ENDIF
+       ENDDO
+    ENDDO
+    
   END SUBROUTINE SETUPNETWORKMESH  
+
+  SUBROUTINE RESERVOIRSTOMESH(RESVP,MESHP,NETP)
+    ! Update mesh object info for reservoir cells, based on explicit reservoirs
+    IMPLICIT NONE
+
+    TYPE(RESERVOIRS), POINTER :: RESVP
+    TYPE(MESH), POINTER :: MESHP
+    TYPE(NETWORK), POINTER :: NETP
+    INTEGER :: CC, BC, IND, RC, RC2, NETDEG, IC, CC2, TERM, ct
+    INTEGER :: EC, V1, V2, MEC, NC
+    DOUBLE PRECISION :: ECENT(MESHP%DIM), INTERLEN
+    DOUBLE PRECISION :: DIFF(RESVP%DIM)
+
+    ! update info for the reservoir cells
+    DO RC = 1,RESVP%NRESV
+       CC = RC ! index among mesh cells
+       MESHP%RESVIND(CC) = RC ! index for this reservoir
+       RESVP%RESVCELL(RC) = CC
+
+       ! volume of reservoir (in terms of edge length; this is really V/(pi a^2)
+       MESHP%VOL(CC) = RESVP%RESVVOL(RC)
+
+       ! surface area of reservoir (in terms of edge length; this is really V/(2*pi*a)
+       MESHP%SA(CC) = RESVP%RESVSA(RC)
+
+       ! effective length used to calculate narrow escape flux into network tube
+       ! for spheres: L = pi*r/2 (r = tube radius)
+       ! for sheets: L = r^2/h*ln(R/r) (h=sheet thickness, pi*R^2 = A = sheet area)
+       ! NOTE: this should never actually be used, since connecting nodes explicitly through edge
+       MESHP%LEN(CC) = RESVP%RESVLENEFF(RC)
+
+       ! number of connected cells
+       ! Add on resv-resv connections on top of node-resv connections
+       MESHP%DEG(CC) = RESVP%RESVDEG(RC)
+
+       ! place position of cell at centroid
+       MESHP%POS(CC,:)= RESVP%RESVCENT(RC,1:MESHP%DIM)
+
+       ! Set up boundaries to connected nodes
+       DO IC = 1,RESVP%RESVNNODE(RC)
+
+          ! this node is connected to our reservoir
+          NC = RESVP%RESVCONNODE(RC,IC,1)
+          IF (NETP%NODEDEG(NC).GT.1) THEN
+             PRINT*, 'ERROR: can only connect terminal nodes to explicit reservoir'
+             STOP 1
+          ENDIF
+          EC = NETP%NODEEDGE(NC, 1) ! edge going out of this node
+
+          ! find the mesh cell leading to this node
+          DO CC2 = 1,MESHP%NCELL
+             IF (MESHP%CELLTYPE(CC2).EQ.1.and.MESHP%TERMNODE(CC2,1).EQ.NC) THEN
+                TERM = 1 ! which side of mesh cell is the terminal node
+                EXIT
+             ELSEIF (MESHP%CELLTYPE(CC2).EQ.1.and.MESHP%TERMNODE(CC2,2).EQ.NC) THEN
+                TERM = 2
+                EXIT
+             ENDIF
+          ENDDO
+          IF (CC2.GT.MESHP%NCELL) THEN
+             PRINT*, 'Failed to find mesh cell terminating at connected node'
+             STOP 1
+          ENDIF
+
+          ! find the reservoir mesh edge for the connection
+          DO BC = 1,RESVP%RESVDEG(RC)
+             IF (RESVP%RESVEDGE(RC,BC).EQ.RESVP%RESVCONNODE(RC,IC,2)) EXIT
+          ENDDO
+          IF (BC.GT.RESVP%RESVDEG(RC)) THEN
+             PRINT*, 'ERROR: reservoir does not actually abut this edge', RC, IC,&
+                  & RESVP%RESVCONNODE(RC,IC,2), RESVP%RESVEDGE(RC,:)
+             STOP 1
+          ENDIF
+
+          ! link the network mesh cell to the reservoir mesh cell
+          MESHP%BOUNDS(CC,BC) = CC2
+          MESHP%BOUNDS(CC2,TERM) = CC
+
+          ! boundary direction always outward from reservoir, into network
+          MESHP%BOUNDDIR(CC,BC) = 1
+          MESHP%BOUNDDIR(CC2,TERM) = -1
+          MESHP%BOUNDEDGE(CC,BC) = EC
+          MESHP%BOUNDEDGE(CC2,TERM) = EC
+
+          ! length between cell centers. Actually, take length to the point halfway
+          ! along the connecting mesh-edge + length along the network tube
+          MEC = RESVP%RESVEDGE(RC,BC)
+          V1 = RESVP%EDGEVERT(MEC,1); V2 = RESVP%EDGEVERT(MEC,2)
+          ECENT = (RESVP%VERTPOS(V1,:) + RESVP%VERTPOS(V2,:))/2
+
+          INTERLEN = SQRT(SUM((RESVP%RESVCENT(RC,:)-ECENT))**2)
+          INTERLEN = INTERLEN + MESHP%LEN(CC2)/2                    
+          MESHP%LENPM(CC,BC) = INTERLEN
+          MESHP%LENPM(CC2,TERM) = INTERLEN
+       ENDDO
+       
+       ! set up boundaries between reservoir cells
+       DO BC = 1,RESVP%RESVDEG(RC)
+          RC2 = RESVP%RESVRESV(RC,BC)
+
+          IF (RC2.EQ.0) THEN
+             CYCLE ! reflecting boundary or connected to node
+          ENDIF
+          MESHP%BOUNDS(CC,BC) = RC2
+          ! area of the boundary to the reservoir edge
+          MESHP%BOUNDAREA(CC,BC) = RESVP%EDGEAREA(RESVP%RESVEDGE(CC,BC))
+
+          ! boundary directions defined to always point towards higher index
+          IF (RC2.GT.RC) THEN
+             MESHP%BOUNDDIR(CC,BC) = 1
+          ELSE
+             MESHP%BOUNDDIR(CC,BC) = -1
+          ENDIF
+
+          ! no edge associated with resv-resv boundary
+          MESHP%BOUNDEDGE(CC,BC) = 0
+
+          ! length between cell centers          
+          DIFF = RESVP%RESVCENT(RC,:) - RESVP%RESVCENT(RC2,:)
+          MESHP%LENPM(CC,BC) = SQRT(SUM(DIFF**2))
+       ENDDO
+       
+    ENDDO
+
+    RESVP%MESHSET = .TRUE.
+    
+  END SUBROUTINE RESERVOIRSTOMESH
+
+
   
   SUBROUTINE SETMESHRADII(MESHP,NETP)
     ! Set up radii for each mesh cell.
@@ -613,6 +793,8 @@ CONTAINS
     TYPE(NETWORK), POINTER :: NETP
     INTEGER :: CC, NC, EC, RC, ECC, NCC, CT
     DOUBLE PRECISION :: TOTRAD
+    LOGICAL :: NETCON
+    INTEGER :: BC, BCT
 
     DO CC = 1,MESHP%NCELL
        SELECT CASE (MESHP%CELLTYPE(CC))
@@ -630,22 +812,115 @@ CONTAINS
           MESHP%RAD(CC) = NETP%EDGERAD(EC)
        CASE (2) ! reservoir cell
           RC = MESHP%RESVIND(CC)
-          ! get average radii of nearby edges
-          TOTRAD = 0D0
-          CT = 0
-          DO NCC = 1,NETP%RESVNNODE(RC)
-             NC = NETP%RESVNODES(RC,NCC) ! node belonging to this reservoir
-             DO ECC = 1,NETP%NODEDEG(NC) ! go over all edges from this node
-                TOTRAD = TOTRAD + NETP%EDGERAD(NETP%NODEEDGE(NC,ECC))
-                CT = CT+1
-             ENDDO
+
+          ! check if this reservoir is connected to any nodes or edges of the network
+          NETCON = .FALSE.
+          DO BCT = 1,MESHP%DEG(CC)
+             BC = MESHP%BOUNDS(CC,BCT)
+             IF (BC.GT.0) THEN
+                IF (MESHP%CELLTYPE(BC).EQ.1.OR.MESHP%CELLTYPE(BC).EQ.0) THEN
+                   NETCON = .TRUE.
+                   EXIT
+                ENDIF
+             ENDIF
           ENDDO
-          MESHP%RAD(CC) = TOTRAD/CT
+
+          IF (NETCON) THEN
+             ! get average radii of nearby edges
+             TOTRAD = 0D0
+             CT = 0
+             DO NCC = 1,NETP%RESVNNODE(RC)
+                NC = NETP%RESVNODES(RC,NCC) ! node belonging to this reservoir
+                DO ECC = 1,NETP%NODEDEG(NC) ! go over all edges from this node
+                   TOTRAD = TOTRAD + NETP%EDGERAD(NETP%NODEEDGE(NC,ECC))
+                   CT = CT+1
+                ENDDO
+             ENDDO
+             MESHP%RAD(CC) = TOTRAD/CT
+          ELSE
+             ! no network nodes are attached to this reservoir
+             ! set radius to arbitrary value, should never be used
+             MESHP%RAD(CC) = 0D0
+          ENDIF
+
        END SELECT
        
     ENDDO
        
   END SUBROUTINE SETMESHRADII
+
+  SUBROUTINE SETMESHBOUNDAREAS(MESHP,NETP)
+    ! set areas of boundaries between mesh elements
+    ! assumes radii of edge cells have been predefined
+    ! ignores boundaries between two reservoir elements
+    ! (these should be set in RESERVOIRSTOMESH)
+
+    IMPLICIT NONE
+    
+    TYPE(MESH), POINTER :: MESHP
+    TYPE(NETWORK), POINTER :: NETP
+    INTEGER :: CC, CC2, NC, NC2, BC, DC, EC
+    
+    DO CC = 1,MESHP%NCELL
+       SELECT CASE (MESHP%CELLTYPE(CC))
+       CASE (0) ! node cell
+          NC = MESHP%NODEIND(CC)
+          
+          ! set each boundary to cross-sectional area of corresponding edge
+          DO BC = 1,MESHP%DEG(CC)
+             CC2 = MESHP%BOUNDS(CC,BC) ! boundary cell
+
+             IF (CC2.EQ.0) THEN ! reflecting boundary
+                ! find edge leading to the right terminal node
+                NC= MESHP%TERMNODE(CC,BC)
+                EC = NETP%NODEEDGE(NC,1)
+                MESHP%BOUNDAREA(CC,BC) = PI*NETP%EDGERAD(EC)**2
+                CYCLE
+             ENDIF
+                
+             IF (MESHP%CELLTYPE(CC2).EQ.1) THEN ! boundary leads to edge                
+                MESHP%BOUNDAREA(CC,BC) = PI*MESHP%RAD(CC2)**2
+             ELSEIF (MESHP%CELLTYPE(CC2).EQ.0) THEN ! boundary leads to another node
+                NC2 = MESHP%NODEIND(CC2)
+                
+                DO DC = 1,NETP%NODEDEG(NC)
+                   EC = NETP%NODEEDGE(NC,DC) ! edge adjacent to this node
+                   IF (NETP%EDGENODE(EC,1).EQ.NC2.OR.NETP%EDGENODE(EC,2).EQ.NC2) THEN
+                      ! this edge leads to the correct bordering node
+                      MESHP%BOUNDAREA(CC,BC) = PI*NETP%EDGERAD(EC)**2
+                      EXIT
+                   ENDIF
+                ENDDO
+             ELSEIF (MESHP%CELLTYPE(CC2).EQ.2) THEN ! boundary leads to a reservoir
+                PRINT*, 'ERROR IN SETMESHBOUNDAREAS: should not have network node directly connected to reservoir', CC, BC, CC2
+                STOP 1
+             ELSE
+                PRINT*, 'ERROR IN SETMESHBOUNDAREAS: this should never happen', CC, BC, CC2
+                STOP 1
+             ENDIF
+          ENDDO
+       CASE (1) ! edge cell
+          ! set both boundaries to cross-sectional area of the edge
+          MESHP%BOUNDAREA(CC,1) = PI*MESHP%RAD(CC)**2
+          MESHP%BOUNDAREA(CC,2) = MESHP%BOUNDAREA(CC,1)
+       CASE (2) ! reservoir cell
+          DO BC = 1,MESHP%DEG(CC)
+             CC2 = MESHP%BOUNDS(CC,BC) ! boundary cell
+             IF (CC2.EQ.0) CYCLE
+             
+             IF (MESHP%CELLTYPE(CC2).EQ.1) THEN
+                ! edge cell connected to this reservoir
+                MESHP%BOUNDAREA(CC,BC) = PI*MESHP%RAD(CC2)**2
+             ELSEIF (MESHP%CELLTYPE(CC2).EQ.0) THEN
+                PRINT*, 'ERROR IN SETMESHBOUNDAREAS 2: should not have network node directly connected to reservoir', CC, BC, CC2
+                STOP 1
+             ENDIF
+          ENDDO
+       END SELECT
+    ENDDO
+    
+    
+  END SUBROUTINE SETMESHBOUNDAREAS
   
   SUBROUTINE OUTPUTMESH(MESHP,OUTFILE)
     ! output mesh structure to a file (for loading in matlab)
@@ -691,13 +966,14 @@ CONTAINS
     ALLOCATE(MESHP%DEG(NCELLTOT),MESHP%BOUNDS(NCELLTOT,MAXDEG))
     ALLOCATE(MESHP%CELLTYPE(NCELLTOT),MESHP%NODEIND(NCELLTOT), MESHP%EDGEIND(NCELLTOT,2), MESHP%TERMNODE(NCELLTOT,MAXDEG))
     ALLOCATE(MESHP%BOUNDDIR(NCELLTOT,MAXDEG), MESHP%BOUNDEDGE(NCELLTOT,MAXDEG), MESHP%BOUNDCLOSED(NCELLTOT,MAXDEG))
-    ALLOCATE(MESHP%RESVIND(NCELLTOT), MESHP%RAD(NCELLTOT))
+    ALLOCATE(MESHP%RESVIND(NCELLTOT), MESHP%RAD(NCELLTOT), MESHP%BOUNDAREA(NCELLTOT,MAXDEG))
     
     MESHP%ARRAYSET = .TRUE.
     
     MESHP%BOUNDS = 0
     MESHP%BOUNDEDGE = 0
     MESHP%BOUNDDIR = 0
+    MESHP%DEG = 0
 
     MESHP%BOUNDCLOSED = .FALSE.
   END SUBROUTINE ALLOCATEMESH
@@ -712,7 +988,7 @@ CONTAINS
     DEALLOCATE(MESHP%DEG,MESHP%BOUNDS)
     DEALLOCATE(MESHP%CELLTYPE,MESHP%NODEIND, MESHP%EDGEIND)
     DEALLOCATE(MESHP%TERMNODE, MESHP%BOUNDDIR, MESHP%BOUNDEDGE, MESHP%BOUNDCLOSED)
-    DEALLOCATE(MESHP%RESVIND, MESHP%RAD)
+    DEALLOCATE(MESHP%RESVIND, MESHP%RAD, MESHP%BOUNDAREA)
     
     MESHP%ARRAYSET = .FALSE.
     MESHP%CELLSET = .FALSE.

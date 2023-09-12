@@ -69,26 +69,26 @@ CONTAINS
     ! Read in info about reservoir elements
     IF (USERESVELEMENTS) THEN
        CALL RESERVOIRSFROMFILE(RESVP,RESVELEMENTFILE)
+    ELSE
+       ! set up reservoir volumes, external concentration
+       DO RC = 1,NETP%NRESV
+          IF (RC.GT.MAXNRESV) THEN
+             PRINT*, 'ERROR: number of reservoirs in network structure &
+                  &          exceeds max allowed number. Increase MAXNRESV in keywords.f90', rc, maxnresv
+             STOP 1
+          ENDIF
+
+          NETP%RESVVOL(RC) = RESVVOL(RC)
+          NETP%RESVSA(RC) = RESVSA(RC)
+          NETP%RESVMIX(RC) = RESVMIX(RC)
+       ENDDO
     ENDIF
    
     
     IF (USEVARRAD.AND.EDGERADRANDTYPE.NE.'NONE') THEN
        ! randomize network edge radii
        CALL SETRANDOMEDGERAD(NETP,EDGERADRANDTYPE,EDGERADRANDPARAMS)
-    ENDIF
-    
-     ! set up reservoir volumes, external concentration
-    DO RC = 1,NETP%NRESV
-       IF (RC.GT.MAXNRESV) THEN
-          PRINT*, 'ERROR: number of reservoirs in network structure &
-&          exceeds max allowed number. Increase MAXNRESV in keywords.f90', rc, maxnresv
-          STOP 1
-       ENDIF
-       
-       NETP%RESVVOL(RC) = RESVVOL(RC)
-       NETP%RESVSA(RC) = RESVSA(RC)
-       NETP%RESVMIX(RC) = RESVMIX(RC)
-    ENDDO
+    ENDIF    
      
     ! set up mesh on network
     IF (USERESVELEMENTS) THEN
@@ -122,7 +122,7 @@ CONTAINS
    
     ! Dump out mesh structure
     PRINT*, 'outputting mesh to: ', MESHFILE
-    CALL OUTPUTMESH(MESHP,MESHFILE)
+    CALL OUTPUTMESH(MESHP,MESHFILE)   
 
     ! initialize the fields
     CALL GETINITCONC(DSP%NFIELD,STARTCONC,STARTEQUIL,DSP%KDEQUIL,INITCONC)

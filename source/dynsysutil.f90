@@ -57,7 +57,11 @@ MODULE DYNSYSUTIL
      LOGICAL, POINTER :: ISPERM(:)
      DOUBLE PRECISION, POINTER :: PERM(:,:), CEXT(:)
      INTEGER :: NPERM
-     
+
+     ! Include flows along edges?
+     LOGICAL :: USEEDGEFLOW
+     ! treat concentrations as 3D?
+     LOGICAL :: CONC3D
   END type DYNSYSTEM
   
 CONTAINS
@@ -376,7 +380,7 @@ CONTAINS
          & ALLOWFIXEDRESV, DORESERVOIRS, ALLOWRESVFIX, &
          & NFIXCELL, RANDFIXCELLS,FIXCELLS, RANDFIXPTS,FIXPTS,NFIXPT,FIXPTCENT,&
          & FIXPTRAD, MAXNABSORBER, MAXNFIELD,NPERMPOS,PERMPOS,POSPERMEABILITY, USEVARRAD, &
-         & RANDFIXRESV, FIXPTMAXDIST, FIXPTEXCENT, FIXPTEXRAD
+         & RANDFIXRESV, FIXPTMAXDIST, FIXPTEXCENT, FIXPTEXRAD, USEEDGEFLOW, USERESVELEMENTS
     USE NETWORKUTIL, ONLY : NETWORK
     USE GENUTIL, ONLY : RANDSELECT_INT
     USE MT19937, ONLY : RANDUNIFCIRCLE
@@ -506,8 +510,10 @@ CONTAINS
                 ENDIF
 
                 ! Check if point is inside excluded region
-                IF (SUM((COORDS(CC,:) - FIXPTEXCENT(1:NETP%DIM))**2).LT.FIXPTEXRAD**2) THEN
-                   PRINT*, 'point is in excluded region. Reselecting', CC, FIXPTEXRAD
+                IF (SUM((MESHP%POS(TMPARR(1),:) - FIXPTEXCENT(1:NETP%DIM))**2)&
+                     & .LT.FIXPTEXRAD**2) THEN
+                   PRINT*, 'point is in excluded region. Reselecting', CC, &
+                        & FIXPTEXRAD, TMPARR(1), MESHP%POS(TMPARR(1),:)
                    SUCCESS = .FALSE.
                 ENDIF
                 
@@ -609,24 +615,27 @@ CONTAINS
           Rc = MESHP%RESVIND(CC)          
           DO FC = 1,DSP%NFIELD
 
-             ! fix if any attached node is in the fix list
-             DO CT= 1,NETP%RESVNNODE(RC)
-                NC = NETP%RESVNODES(RC,CT)
+             ! check if reservoir is within range of those that have nodes attached to them
+             IF (RC.LE.NETP%NRESV) THEN
+                ! fix if any attached node is in the fix list
+                DO CT= 1,NETP%RESVNNODE(RC)
+                   NC = NETP%RESVNODES(RC,CT)
 
-                DO CT2 = 1,NFIX(FC)
-                   IF (FIXNODES(CT2,FC).EQ.NC) THEN
-                      IF (.NOT.ALLOWFIXEDRESV.and.DORESERVOIRS) THEN
-                         PRINT*, 'ERROR IN SETTING UP FIXED NODES: reservoir fixed nodes not allowed'
-                         STOP 1
+                   DO CT2 = 1,NFIX(FC)
+                      IF (FIXNODES(CT2,FC).EQ.NC) THEN
+                         IF (.NOT.ALLOWFIXEDRESV.and.DORESERVOIRS) THEN
+                            PRINT*, 'ERROR IN SETTING UP FIXED NODES: reservoir fixed nodes not allowed'
+                            STOP 1
+                         ENDIF
+
+                         ! set to first fixed value among attached nodes
+                         DSP%ISFIXED(CC,FC)=.TRUE.
+                         DSP%FIXVALS(CC,FC) = FIXVALS(CT2,FC)
+                         EXIT
                       ENDIF
-                      
-                      ! set to first fixed value among attached nodes
-                      DSP%ISFIXED(CC,FC)=.TRUE.
-                      DSP%FIXVALS(CC,FC) = FIXVALS(CT2,FC)
-                      EXIT
-                   ENDIF
-                ENDDO                
-             ENDDO
+                   ENDDO
+                ENDDO
+             ENDIF
 
              ! also fix if the reservoir itself is in the fix list
              IF (ALLOWFIXEDRESV) THEN
@@ -818,6 +827,11 @@ CONTAINS
     ENDDO
 
     DSP%VARRAD = USEVARRAD
+    DSP%USEEDGEFLOW = USEEDGEFLOW
+
+    ! Treat concentrations as 3D if explicitly flagged, OR if working
+    ! with meshed reservoirs
+    DSP%CONC3D = USERESVELEMENTS
   END SUBROUTINE SETPARAMDYNSYS
   
   SUBROUTINE SETUPDYNSYS(DSP,MESHP,NFIELD)

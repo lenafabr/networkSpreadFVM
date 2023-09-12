@@ -360,7 +360,7 @@ CONTAINS
          & MAXLOOPLEN, DORESERVOIRS, NFIELD, RANDFIXNODES,&
          & NODEVOL,RESVVOL, RESVSA,RESVLEN,FIXEDGEVEL,FIXEDGEVELVAL,&
          & NFIXEDGEVEL, FIXNODES, FIXVALS, NFIX, &
-         & FIXNODEFROMNETFILE, NETWORKDIM,USEVARRAD, VERBOSE
+         & FIXNODEFROMNETFILE, NETWORKDIM,USEVARRAD, VERBOSE, EDGERADBASE
     
     USE GENUTIL, ONLY : NORMALIZE
     ! Set up (allocate) a network structure, reading in connectivity and
@@ -509,7 +509,7 @@ CONTAINS
            IF (USEVARRAD.AND.NITEMS.GT.5) THEN ! read in edge radius directly
               CALL READF (NETP%EDGERAD(EID))
            ELSE
-              NETP%EDGERAD(EID) = sqrt(1/pi) ! default to unit area
+              NETP%EDGERAD(EID) = EDGERADBASE ! default to unit area
            ENDIF
               
            IF (NODE1.LT.1.OR.NODE2.LT.1.OR.EID.LT.1&
@@ -634,14 +634,16 @@ CONTAINS
         ENDIF
      ENDDO
 
-     PRINT*, 'Reservoir nodes:', NETP%NRESV
+     PRINT*, 'Network Reservoir nodes:', NETP%NRESV
      ! only print the nodes for the first few reservoirs
      DO RC = 1,MIN(NETP%NRESV,3)
-        PRINT*, RC, NETP%RESVNNODE(RC),NETP%RESVNODES(RC,1:NETP%RESVNNODE(RC))
-        IF (NETP%RESVNNODE(RC).LT.1) THEN
-           PRINT*, 'ERROR: reservoir with no nodes', RC
-           STOP 1
+        IF (NETP%RESVNNODE(RC).GE.1) THEN
+           PRINT*, RC, NETP%RESVNNODE(RC),NETP%RESVNODES(RC,1:NETP%RESVNNODE(RC))
         ENDIF
+        ! IF (NETP%RESVNNODE(RC).LT.1) THEN
+        !    PRINT*, 'ERROR: reservoir with no nodes', RC
+        !    STOP 1
+        ! ENDIF
      ENDDO
 
      

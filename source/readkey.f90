@@ -224,6 +224,7 @@ SUBROUTINE READKEY
   ! parameters for randomizing edge radii
   EDGERADRANDTYPE = 'NONE'
   EDGERADRANDPARAMS = 0
+  EDGERADBASE = SQRT(1/PI) ! default edge radius
   
   ! if positive, predefines a network dimension
   ! otherwise, dimension set to # items in NODE row of network file - 2
@@ -235,6 +236,12 @@ SUBROUTINE READKEY
   ! input reservoir elements from file
   USERESVELEMENTS = .FALSE.
   RESVELEMENTFILE = '*.resv.txt'
+
+  ! include calculations involving flow velocities along edges
+  USEEDGEFLOW = .TRUE.
+
+  ! concentrations are expressed as 3D rather than 1D quantities
+  CONCENTRATIONS3D = .FALSE.
   
   ! -------------------------
   ! Read in all parameter files, starting with the ones specified on command line
@@ -331,6 +338,12 @@ SUBROUTINE READKEY
            DO I = 1,MIN(MAXNFIELD,NITEMS-1)
               CALL READF(CEXT(I))
            ENDDO
+        CASE('CONCENTRATIONS3D')
+           IF (NITEMS.GT.1) THEN
+              CALL READO(CONCENTRATIONS3D)
+           ELSE
+              CONCENTRATIONS3D = .TRUE.
+           ENDIF
         CASE('CONTFILE')
            CALL READA(CONTFILE)
         CASE('CONTSEP')
@@ -368,6 +381,8 @@ SUBROUTINE READKEY
            ENDDO
         CASE('DELT')
            CALL READF(DELT)
+        CASE('EDGERADBASE') 
+           CALL READF(EDGERADBASE)
         CASE('EDGERADRAND')
            CALL READA(EDGERADRANDTYPE,1)
            DO I = 1,MIN(NITEMS-2,10)
@@ -444,7 +459,7 @@ SUBROUTINE READKEY
            DO FC = 1,NITEMS-1
               CALL READI(DUMI)
               IF (DUMI<MAXNRESV) ALLOWRESVFIX(DUMI) = .FALSE.              
-           ENDDO
+           ENDDO    
         CASE('NODEVOL')
            CALL READF(NODEVOL)
         CASE('NSTEP')
@@ -657,6 +672,12 @@ SUBROUTINE READKEY
            ELSE
               TRACKFLUXPERM = .TRUE.
            ENDIF
+        CASE('USEEDGEFLOW')
+           IF (NITEMS.GT.1) THEN
+              CALL READO(USEEDGEFLOW)
+           ELSE
+              USEEDGEFLOW = .TRUE.
+           ENDIF
         CASE('USEPERMPREFACTOR')
            IF (NITEMS.GT.1) THEN
               CALL READO(USEPERMPREFACTOR)
@@ -773,6 +794,10 @@ SUBROUTINE READKEY
         PRINT*, 'Kon, Koff:', KON, KOFF
      ENDIF     
   ENDIF
+
+  print*, 'Work with 3D concentrations? Or meshed reservoirs?:', CONCENTRATIONS3D, USERESVELEMENTS
+  
+  print*, 'Flows along edges?:', USEEDGEFLOW, RUNSPEED  
   
  !print*, 'CONTSPEED, CONTFLOW, OPENRATE:', CONTSPEED, CONTFLOW, OPENRATE
   print*, 'DCOEFF:', dcoeff

@@ -160,9 +160,14 @@ MODULE KEYS
   ! randomizing net
   CHARACTER(LEN=100) :: EDGERADRANDTYPE
   DOUBLE PRECISION :: EDGERADRANDPARAMS(10)
-
+  DOUBLE PRECISION :: EDGERADBASE ! default edge radius
+  
   ! Reservoir elements
   LOGICAL :: USERESVELEMENTS
   CHARACTER(LEN=100) :: RESVELEMENTFILE
+
+  ! include flow calculations?
+  ! treat concentrations as 3D?
+  LOGICAL :: USEEDGEFLOW, CONCENTRATIONS3D
   
 END MODULE KEYS

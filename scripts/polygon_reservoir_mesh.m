@@ -8,7 +8,7 @@
 % https://www.mathworks.com/help/pde/ug/create-geometry-at-the-command-line.html
 
 % set up the polygon
-nside=5;
+nside=100;
 Rpoly = 3; % polygon radius
 pgon = nsidedpoly(nside);
 pgon.Vertices = pgon.Vertices*Rpoly;
@@ -25,7 +25,11 @@ for sc = 1:nside
     cent = (pgon.Vertices(sc,:)+vertend)/2
     evec = vertend-pgon.Vertices(sc,:); evec = evec/norm(evec);
     coords = [cent-evec*rad; cent+evec*rad];
-    verts = [verts; coords; vertend];
+    if (mod(sc,20)==0)
+        verts = [verts; coords; vertend];
+    else
+        verts = [verts; vertend];
+    end
 end
 verts = verts(1:end-1,:);
 plot(verts(:,1),verts(:,2),'.-')
@@ -47,7 +51,7 @@ g = geometryFromEdges(model,gd)
 pdegplot(g,'FaceLabels','on','EdgeLabels','on')
 
 %% create a triangular mesh object
-mesh = generateMesh(model,'Hmax',1,'Hmin',0.1,'GeometricOrder','linear');
+mesh = generateMesh(model,'Hmax',0.1,'Hmin',0.1,'GeometricOrder','linear');
 pdeplot(mesh)
 hold all
 plot(verts(:,1),verts(:,2),'k.-','MarkerSize',20)
@@ -112,6 +116,12 @@ for mc = 1:width(mesh.Elements)
 
     % surface area (both faces of triangle)
     resvSA(mc) = 2*AE(mc);
+
+    % compute effective length used to calculate escape into tubules
+    % for sheets: L = r^2/h*ln(R/r) (h=sheet thickness, pi*R^2 = A = sheet area)
+    reff = sqrt(AE(mc)/pi);
+    rtube = 0.05; % tubule radius
+    resvleneff(mc) = rtube^2/resvheight*log(reff/rtube);
 end
 
 %% Output mesh information to a text file
@@ -121,7 +131,7 @@ end
 % type E = edge, info = vertex i1, i2, mesh elements 1,2, area
 % type R = mesh element, info = vertex i1,i2,i3, edges e1,e2,e3, volume,SA
 
-fname = '../networks/pentagonresv.txt';
+fname = '../networks/circpolyresv.txt';
 OF = fopen(fname,'w');
 
 fprintf(OF,'%s\n%s\n\n','# meshed pentagon reservoirs','# made with polygon_reservoir_mesh')
@@ -138,16 +148,38 @@ for ec = 1:length(edgelist)
 end
 
 % output reservoirs
+% index, vertices, edges, volume, SA, effective len (not used)
 for rc = 1:width(mesh.Elements)
-    fprintf(OF,'%s %d %d %d %d %d %d %d %15.10f %15.10f\n','RESV', rc, mesh.Elements(:,rc)',resvedges(rc,:),resvvol(mc),resvSA(mc));
+    fprintf(OF,'%s %d %d %d %d %d %d %d %15.10f %15.10f %15.10f\n','RESV', ...
+        rc, mesh.Elements(:,rc)',resvedges(rc,:),resvvol(mc),resvSA(mc),resvleneff(mc));
 end
+
+
+% output connections to network nodes
+ind = find(nodeconresv>0); % nodes that have a reservoir connected
+for ic = 1:length(ind)
+    nc = ind(ic); % which node
+    rc = nodeconresv(nc); % which reservoir
+    ec = nodeconedge(nc); % which edge
+
+    fprintf(OF,'%s %d %d %d\n','NODECON', ...
+        nc, rc, ec)
+end
+%
 fclose(OF)
 
 %% make list of reservoir indices to be connected to tubules
 % tubecon resv lists the reservoir and mesh edge index for each connection
 tubeconresv = [];
 ct=0;
-for sc = 2:3:g.NumEdges
+
+% get the shortest edges
+d = diff(g.Vertices);
+nd = sqrt(sum(d.^2,2));
+minlen =  min(nd);
+ind = find(nd <= minlen*1.0000001);
+%
+for sc = ind'%2:3:g.NumEdges
     % get mesh nodes associated with the short boundary edges
     nid = findNodes(mesh,'region',Edge=sc);
     % mesh edge for the short segment
@@ -170,7 +202,7 @@ hold off
 % linked up to the mesh reservoirs
 edgelen = 0.2;
 nc=1; ec=1;
-nodepos = []; edgenodes = [];
+nodepos = []; edgenodes = []; noceconresv = []; nodeconedge = [];
 for rc = 1:length(tubeconresv)
     eid = tubeconresv(2,rc);
     i1 = edgelist(eid).vert(1); i2 = edgelist(eid).vert(2);
@@ -188,6 +220,10 @@ for rc = 1:length(tubeconresv)
     % label which reservoir the nodes belong to
     nodelabels{nc} = sprintf('R%d',tubeconresv(1,rc));
     nodelabels{nc+1} = '';
+
+    % which reservoir, through which edge is this node connected
+    nodeconresv(nc) = tubeconresv(1,rc);
+    nodeconedge(nc) = eid;
 
     nc = nc+2;
     ec=ec+1;
@@ -207,4 +243,4 @@ hold all
 %% output network
 options = struct();
 options.nodelabels = nodelabels;
-NT.outputNetwork('../networks/pentagonresv_tubes.net',options);
+NT.outputNetwork('../networks/circlepolyresv_tubes.net',options);
