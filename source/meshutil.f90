@@ -132,7 +132,7 @@ CONTAINS
     PRINT*, 'Closed N boundaries out of total:', NCLOSE, NTOT/2, PTRY, PCLOSE
   END SUBROUTINE CLOSEBOUNDS
   
-  SUBROUTINE SETUPNETWORKMESH(MESHP,NETP,MAXCELLLEN,MINNCELL,RESVP)
+  SUBROUTINE SETUPNETWORKMESH(MESHP,NETP,MAXCELLLEN,MINNCELL,CONC3D,RESVP)
     IMPLICIT NONE
     ! using a network object, set up a mesh on it for FVM simulations
     ! * CELL-CENTERED mesh. Same distance from cell position to each boundary *
@@ -143,6 +143,7 @@ CONTAINS
     ! this subroutine allocates all arrays, including the mapping from network to mesh indices
     ! Does NOT set diffusivity or velocities on the mesh
     ! Network object must be fully set up already
+    ! CONC3D: work with 3D concentrations? default is 1D
     ! OPTIONAL: RESVP input is a pointer to a reservoirs object desribing interconnected
     ! reservoir elements to be included in the mesh
     
@@ -150,7 +151,8 @@ CONTAINS
     TYPE(NETWORK), POINTER :: NETP
     TYPE(RESERVOIRS), POINTER, OPTIONAL :: RESVP
     DOUBLE PRECISION, INTENT(IN) :: MAXCELLLEN
-    INTEGER, INTENT(IN) :: MINNCELL    
+    INTEGER, INTENT(IN) :: MINNCELL
+    logical, INTENT(IN) :: CONC3D
     
     INTEGER :: EC, NC, CC, CT, N1, N2, D1, D2, BC, RC, bct, CCT
     INTEGER :: NCELL
@@ -592,10 +594,17 @@ CONTAINS
        CALL RESERVOIRSTOMESH(RESVP,MESHP,NETP)
     ENDIF
 
-    CALL SETMESHRADII(MESHP,NETP)
-    
     ! default mesh cell radius
-    MESHP%RAD = SQRT(1D0/PI)
+    !MESHP%RAD = SQRT(1D0/PI)
+
+    ! set mesh radii
+    CALL SETMESHRADII(MESHP,NETP)        
+    CALL SETMESHBOUNDAREAS(MESHP,NETP)
+    
+    ! set up to work with 3D concentrations
+    IF (CONC3D) THEN
+       CALL UPDATEMESH3D(MESHP)
+    ENDIF
     
     MESHP%CELLSET = .TRUE.
     NETP%MESHSET = .TRUE.    
@@ -617,6 +626,8 @@ CONTAINS
 
           IF (CT.EQ.0) THEN
              PRINT*, 'BOUNDARY MISMATCH'
+             print*, CC, MESHP%DEG(CC), MESHP%CELLTYPE(CC), BCT
+             PRINT*, BC, MESHP%DEG(BC), MESHP%CELLTYPE(BC), MESHP%BOUNDS(BC,:)
              STOP 1
           ENDIF
           IF (ABS(MESHP%LENPM(CC,BCT)-MESHP%LENPM(BC,CT)).GT.1D-10) THEN
@@ -921,6 +932,23 @@ CONTAINS
     
     
   END SUBROUTINE SETMESHBOUNDAREAS
+
+  SUBROUTINE UPDATEMESH3D(MESHP)
+    ! update node and edge cells on mesh to deal with 3D concentrations
+    ! just changes the values of VOL and SA for each mesh cell on network node or edge
+    ! does not do anything to reservoir cells
+    IMPLICIT NONE
+    TYPE(MESH), POINTER :: MESHP
+    INTEGER :: CC
+
+    DO CC = 1,MESHP%NCELL
+       IF (MESHP%CELLTYPE(CC).EQ.0.OR.MESHP%CELLTYPE(CC).EQ.1) THEN
+          MESHP%VOL(CC) = MESHP%LEN(CC)*PI*MESHP%RAD(CC)**2
+          MESHP%SA(CC) = MESHP%LEN(CC)*2*PI*MESHP%RAD(CC)
+       ENDIF
+    END DO
+    
+  END SUBROUTINE UPDATEMESH3D
   
   SUBROUTINE OUTPUTMESH(MESHP,OUTFILE)
     ! output mesh structure to a file (for loading in matlab)
@@ -940,7 +968,7 @@ CONTAINS
        DEG = MESHP%DEG(CT)
        ! for each cell output: index, position, degree, total cell length, bounding cells, reservoir
        WRITE(OU,*) CT, MESHP%POS(CT,:), MESHP%VOL(CT), DEG, &
-            & MESHP%BOUNDS(CT,1:DEG), MESHP%NODEIND(CT), MESHP%EDGEIND(CT,1:2), MESHP%RESVind(CT)
+            & MESHP%BOUNDS(CT,1:DEG), MESHP%NODEIND(CT), MESHP%EDGEIND(CT,1:2), MESHP%RESVind(CT), MESHP%RAD(CT)
     ENDDO
     
     CLOSE(OU)

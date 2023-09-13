@@ -51,6 +51,9 @@ methods
                     MSH.nodeind(cc) = data(cc+1,dim+deg+4);
                     MSH.edgeind(cc,:) = data(cc+1,dim+deg+(5:6));
                     MSH.resvind(cc) = data(cc+1,dim+deg+7);
+                    if (size(data,2)>dim+deg+7)
+                        MSH.rad(cc) = data(cc+1,dim+deg+8);
+                    end
                 else
                     % no node/edge info
                     MSH.nodeind(cc) = 0; MSH.edgeind(cc,:) = 0;
