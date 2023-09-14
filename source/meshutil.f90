@@ -350,7 +350,6 @@ CONTAINS
        NETP%NODECELLS(NC) = CT
     ENDDO
 
-    
     ! ----------
     ! set up cells on edges
     ! -----------
@@ -432,7 +431,6 @@ CONTAINS
     ENDDO
 
    
-    
     IF (CT.NE.MESHP%NCELL) THEN
        PRINT*, 'ERROR IN SETUPMESH: wrong number of cells', MESHP%NCELL, CT
        STOP 1

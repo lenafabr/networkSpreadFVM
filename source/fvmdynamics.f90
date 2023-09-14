@@ -556,7 +556,7 @@ CONTAINS
     DOUBLE PRECISION :: WSHIFT(DSP%NFIELD), WAVG(DSP%NFIELD), FLUXADV(DSP%NFIELD)
     DOUBLE PRECISION :: DFREE
     DOUBLE PRECISION :: BFIELD(DSP%MESHP%NCELL), CFIELD(DSP%MESHP%NCELL), LKD
-    DOUBLE PRECISION :: DR, DSCL, A1, A2, ABOUND
+    DOUBLE PRECISION :: DR, DSCL, A1, A2, ABOUND,tmp
     
     IF (DSP%NFIELD.NE.2.or.DSP%BUFFERTYPE.NE.2.OR.DSP%DOACTIVATION) THEN
        PRINT*, 'ERROR: EULERSTEPEQUIL only works with 2 fields and Buffer Type 2. No activation'
@@ -577,6 +577,13 @@ CONTAINS
     DO CC = 1,MESHP%NCELL
        DEG = MESHP%DEG(CC)       
 
+       ! IF (ANY(DSP%FIELDS(CC,:).LT.-1D-10)) THEN
+       !    PRINT*, 'Negative field!'
+       !    PRINT*, CC, MESHP%CELLTYPE(CC), MESHP%NODEIND(CC), MESHP%EDGEIND(CC,1), MESHP%RESVIND(CC)
+       !    PRINT*, DSP%FIELDS(CC,:)
+       !    STOP 1
+       ! ENDIF
+       
        ! diffusive flux (of total ligand and total protein)
        FLUXDIFF = 0D0
        DO BCT = 1,DEG ! boundary counter
@@ -715,7 +722,8 @@ CONTAINS
        ENDIF
                      
        ! get change in free ligand from delta total lig and delta total prot
-       LKD = DSP%FIELDS(CC,1) + DSP%KDEQUIL;
+       LKD = DSP%FIELDS(CC,1) + DSP%KDEQUIL;       
+       
        DFDT(CC,1) = (DFDT(CC,1) - DSP%FIELDS(CC,1)*DFDT(CC,2)/LKD)/ &            
             & (1 + DSP%FIELDS(CC,2)*DSP%KDEQUIL/LKD**2)                       
       

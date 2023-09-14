@@ -122,12 +122,18 @@ geometryFromEdges(model,dl)
 pdegplot(dl,'FaceLabels','on','EdgeLabels','on')
 
 %%
-save('../networks/circlenuchexmesh_sheets10_b.mat')
+save('../networks/circlenuchexmesh_sheets10.mat')
+
+
+%% plot network and mesh
+NT.plotNetwork()
+hold all
+%pdeplot(mesh)
+pdegplot(dl,'FaceLabels','on')
+hold off
 
 %%
 NT0 = copy(NT);
- 
-
 %% Restructure network around the sheets
 
 ct = 0;
@@ -135,7 +141,7 @@ newnodes = []; newcon = {};
 dokeepnode = true(1,NT.nnode);
 
 for sc = 1:size(allsheetcent,1)
-    %
+    %%
     sheet2node{sc} = [];
     
     sheetcent = allsheetcent(sc,1:2);
@@ -163,11 +169,11 @@ for sc = 1:size(allsheetcent,1)
             % edge going to this neighbor
             ec = NT.nodeedges(nc,ic2);
             
-            % position half-way along the edge
-            pint = p1*0.5 + p2*0.5;
-            
             % get intersection point
-            %[z,pint] = segcircintersect(p1,p2,sheetcent,Rsheet);
+            [z,pint] = segcircintersect(p1,p2,sheetcent,Rsheet);
+            
+            % do not make connections that would lead to very short edges
+            if (z > 0.9); continue; end
             
             hold all
             plot(pint(1),pint(2),'co')

@@ -50,8 +50,10 @@ filename = [dirname 'sheetnuchex_Rpt29_mpt1_lowca_P20.out'];
 [flux0,tvals0,cumflux0,tavg0] = loadTotFluxSim(filename); 
 %% new sims with meshed reservoir
 dirname = '../results/netleak/sheets/';
-filename = [dirname 'circlenuchexmesh_lowca_P20.out'];
+%filename = [dirname 'circlenuchexmesh_lowca_P20.out'];
+filename = [dirname 'circlenuchexmesh_sheets10.0.out'];
 [flux,tvals,cumflux,tavg] = loadTotFluxSim(filename);   
+size(tavg)
 %%
 sclmM = 1e-3*6e23/1000*1e-12;% scale to convert mM to per um^3
 
@@ -59,6 +61,7 @@ plot(tavg0,cumflux0*sclmM,tavg,cumflux*sclmM)
 xlabel('time')
 ylabel('release')
 
+xlim([0 max(tavg)])
 %% read in a snapshot and get total amount of calcium in system
 [field0,snaptimes0] = loadSnapshotFVM([dirname '../struct2D/sheetnuchex_Rpt29_mpt1_lowca_P20.snap.txt']);
 MSH0 = MeshObj([dirname '../struct2D/sheetnuchex_Rpt29_mpt1_lowca_P20.mesh.txt']);
@@ -66,8 +69,13 @@ MSH0 = MeshObj([dirname '../struct2D/sheetnuchex_Rpt29_mpt1_lowca_P20.mesh.txt']
 tot0 = MSH0.len'*field0(:,1,1)
 
 %%
-[field,snaptimes] = loadSnapshotFVM([dirname '../sheets/circlenuchexmesh_lowca_P20.snap.txt']);
-MSH = MeshObj([dirname '../sheets/circlenuchexmesh_lowca_P20.mesh.txt']);
+
+%[field,snaptimes] = loadSnapshotFVM([dirname '../sheets/circlenuchexmesh_lowca_P20.snap.txt']);
+%MSH = MeshObj([dirname '../sheets/circlenuchexmesh_lowca_P20.mesh.txt']);
+
+[field,snaptimes] = loadSnapshotFVM([dirname '../sheets/circlenuchexmesh_sheets10.0.snap.txt']);
+MSH = MeshObj([dirname '../sheets/circlenuchexmesh_sheets10.0.mesh.txt']);
+
 
 %% compare volumes (excluding reservoir)
 a=0.05;
@@ -95,11 +103,14 @@ end
 
 delete(findobj(gca,'Type','patch'))
 clear h
-for sc = length(snaptimes)
+for sc = 1:length(snaptimes)
     C = field(1:nm,1,sc);
     % clear prior plots
     if (exist('h','var'))
         if (isvalid(h)); delete(h); end
+    end
+    if (exist('hpts','var'))
+        if (isvalid(hpts)); delete(hpts); end
     end
     
     % make new plots
@@ -108,7 +119,7 @@ for sc = length(snaptimes)
     % also draw scatterdots for network mesh elements (should turn these to
     % rectangular patches really
     ind = find(MSH.edgeind(:,1)>0);
-    scatter(MSH.pos(ind,1),MSH.pos(ind,2),MSH.len(ind)*5000,field(ind,1,sc)','filled')
+    hpts = scatter(MSH.pos(ind,1),MSH.pos(ind,2),MSH.len(ind)*50000,field(ind,1,sc)','filled')
     hold off
     caxis([0,1])
     title(sprintf('Time %0.4f', snaptimes(sc)))

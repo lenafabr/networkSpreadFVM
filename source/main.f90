@@ -108,11 +108,11 @@ CONTAINS
      CALL SETUPDYNSYS(DSP,MESHP,NFIELD)
      CALL SETPARAMDYNSYS(DSP,NETP)
 
-     DO CC = 1,MESHP%NCELL
-        IF (DSP%PERM(CC,1).GT.0) THEN
-           PRINT*, 'TESTX0:', CC, MESHP%CELLTYPE(CC), MESHP%RAD(CC), MESHP%LEN(CC), MESHP%VOL(CC), MESHP%SA(CC), DSP%PERM(CC,1)
-        ENDIF
-    ENDDO
+     ! DO CC = 1,MESHP%NCELL
+    !     IF (DSP%PERM(CC,1).GT.0) THEN
+    !        PRINT*, 'perm cells:', CC, MESHP%CELLTYPE(CC), MESHP%RAD(CC), MESHP%LEN(CC), MESHP%VOL(CC), MESHP%SA(CC), DSP%PERM(CC,1)
+    !     ENDIF
+    ! ENDDO
      
      
      ! Set up contraction information
