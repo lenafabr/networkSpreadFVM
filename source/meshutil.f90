@@ -257,8 +257,10 @@ CONTAINS
     ENDDO
 
     DIM = NETP%DIM
-    IF (DIM.NE.RESVP%DIM) THEN
-       PRINT*, 'ERROR: network and reservoirs are in different dimensions', DIM, RESVP%DIM
+    IF (PRESENT(RESVP)) THEN
+       IF (DIM.NE.RESVP%DIM) THEN
+          PRINT*, 'ERROR: network and reservoirs are in different dimensions', DIM, RESVP%DIM
+       ENDIF
     ENDIF
     
     ! each reservoir gets its own cell

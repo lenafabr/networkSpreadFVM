@@ -51,15 +51,17 @@ filename = [dirname 'sheetnuchex_Rpt29_mpt1_lowca_P20.out'];
 %% new sims with meshed reservoir
 dirname = '../results/netleak/sheets/';
 %filename = [dirname 'circlenuchexmesh_lowca_P20.out'];
-filename = [dirname 'circlenuchexmesh_sheets10.0.out'];
+filename = [dirname 'circlenuchexmesh_sheets10.out'];
 [flux,tvals,cumflux,tavg] = loadTotFluxSim(filename);   
 size(tavg)
 %%
 sclmM = 1e-3*6e23/1000*1e-12;% scale to convert mM to per um^3
 
-plot(tavg0,cumflux0*sclmM,tavg,cumflux*sclmM)
+plot(tavg0,cumflux0*sclmM,tavg,cumflux*sclmM,'LineWidth',2)
+legend('no sheets', '10 sheets')
+plot_cleanup(gca,'FontSize',14)
 xlabel('time')
-ylabel('release')
+ylabel('cumulative Ca released')
 
 xlim([0 max(tavg)])
 %% read in a snapshot and get total amount of calcium in system
@@ -73,8 +75,8 @@ tot0 = MSH0.len'*field0(:,1,1)
 %[field,snaptimes] = loadSnapshotFVM([dirname '../sheets/circlenuchexmesh_lowca_P20.snap.txt']);
 %MSH = MeshObj([dirname '../sheets/circlenuchexmesh_lowca_P20.mesh.txt']);
 
-[field,snaptimes] = loadSnapshotFVM([dirname '../sheets/circlenuchexmesh_sheets10.0.snap.txt']);
-MSH = MeshObj([dirname '../sheets/circlenuchexmesh_sheets10.0.mesh.txt']);
+[field,snaptimes] = loadSnapshotFVM([dirname '../sheets/circlenuchexmesh_sheets10.snap.txt']);
+MSH = MeshObj([dirname '../sheets/circlenuchexmesh_sheets10.mesh.txt']);
 
 
 %% compare volumes (excluding reservoir)
@@ -102,8 +104,10 @@ for cc = 1:nm
 end
 
 delete(findobj(gca,'Type','patch'))
-clear h
+clear h hpts M
+figure
 for sc = 1:length(snaptimes)
+    clf
     C = field(1:nm,1,sc);
     % clear prior plots
     if (exist('h','var'))
@@ -119,11 +123,26 @@ for sc = 1:length(snaptimes)
     % also draw scatterdots for network mesh elements (should turn these to
     % rectangular patches really
     ind = find(MSH.edgeind(:,1)>0);
-    hpts = scatter(MSH.pos(ind,1),MSH.pos(ind,2),MSH.len(ind)*50000,field(ind,1,sc)','filled')
+    hpts = scatter(MSH.pos(ind,1),MSH.pos(ind,2),MSH.len(ind)*10000,field(ind,1,sc)','filled')
     hold off
-    caxis([0,1])
+    caxis([0,0.5])
+    colormap copper
+    axis equal
+    set(gca,'Visible','off','Position',[0.02 0.02 0.96 0.95])
+    axis equal
+    set(gcf,'Color','w')
     title(sprintf('Time %0.4f', snaptimes(sc)))
+    
+    text(10,16,sprintf('$t = %0.2f$ sec',snaptimes(sc)),'FontSize',16,'Interpreter','latex')   
+    cb=colorbar;
+    cb.TickLabelInterpreter='latex';
+    cb.FontSize = 14;    
+    axis equal
+    
     drawnow
     
+    M(sc) = getframe(gcf);
 end
-%trisurf(T,x,y,z)
+
+%%
+animation2movie(M,'~/UCSD/writeup/ERCadelivery/workfig/circlenuchex_sheets10_movie.avi',20)
