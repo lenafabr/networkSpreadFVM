@@ -359,10 +359,10 @@ CONTAINS
     USE KEYS, ONLY : MAXBRANCH,  NABS, ABSORBERS, &
          & MAXLOOPLEN, DORESERVOIRS, NFIELD, RANDFIXNODES,&
          & NODEVOL,RESVVOL, RESVSA,RESVLEN,FIXEDGEVEL,FIXEDGEVELVAL,&
-         & NFIXEDGEVEL, FIXNODES, FIXVALS, NFIX, &
+         & NFIXEDGEVEL, FIXNODES, FIXVALS, NFIX, FIXSUBSETNODES, MAXNABSORBER, &
          & FIXNODEFROMNETFILE, NETWORKDIM,USEVARRAD, VERBOSE, EDGERADBASE
     
-    USE GENUTIL, ONLY : NORMALIZE
+    USE GENUTIL, ONLY : NORMALIZE, RANDSELECT_INT
     ! Set up (allocate) a network structure, reading in connectivity and
     ! geometry from an input file    
     
@@ -378,8 +378,10 @@ CONTAINS
     INTEGER :: TMPARRAY(MAXBRANCH)
     LOGICAL, ALLOCATABLE :: EDGELENSET(:)
     INTEGER :: NODERESV, MAXRESV
-    INTEGER :: NC, RC, FC
-    LOGICAL, ALLOCATABLE :: ISFIXED(:)
+    INTEGER :: NC, RC, FC, ALLNFIX    
+    LOGICAL, ALLOCATABLE :: ISFIXED(:), ISFIXABLE(:)
+    INTEGER, ALLOCATABLE :: ALLFIX(:)
+    INTEGER :: FIXINDS(MAXNABSORBER)
     DOUBLE PRECISION :: SAVEFIXVAL
     
     INTEGER, PARAMETER :: NF = 55 ! input file unit number
@@ -454,14 +456,17 @@ CONTAINS
      CALL SETUPNETWORK(NETP,NNODE,NEDGE,MAXRESV,NLOOP,DIM,NFIELD,MAXBRANCH,MAXLOOPLEN,&
           & ABSORBERS,NABS)
           
-     ALLOCATE(EDGELENSET(NEDGE), ISFIXED(NNODE))
+     ALLOCATE(EDGELENSET(NEDGE), ISFIXED(NNODE), ALLFIX(NNODE),ISFIXABLE(NNODE))
      EDGELENSET=.FALSE. ! which edges are set directly from file
 
      PRINT*, 'Reading in node positions and edge connectivity...'
      OPEN(UNIT=NF, FILE=NETFILE, STATUS='OLD')
      ! Get node and edge information
      WHICHLOOP = 0
-     IF (FIXNODEFROMNETFILE) ISFIXED = .FALSE.
+     IF (FIXNODEFROMNETFILE) THEN
+        ISFIXED = .FALSE.; ISFIXABLE = .FALSE.
+     ENDIF
+     
      DO 
         CALL READLINE(NF,FILEEND,NITEMS)
         IF (FILEEND.and.nitems.eq.0) EXIT
@@ -494,7 +499,12 @@ CONTAINS
                  READ(LBL(2:100),*) FC
                  NETP%ISPERM(NID) = .TRUE.
               ELSEIF(LBL(1:1).EQ.'F'.AND.FIXNODEFROMNETFILE) THEN ! set this as a fixed node
-                 ISFIXED(NID) = .TRUE.
+                 IF(LBL(2:2).EQ.'O') THEN
+                    ! obligate fixed node
+                    ISFIXED(NID) = .TRUE.
+                 ELSE
+                    ISFIXABLE(NID) = .TRUE.
+                 ENDIF                
               ENDIF              
            ENDDO
 
@@ -558,8 +568,21 @@ CONTAINS
         
         SAVEFIXVAL = FIXVALS(1,1)
         
-        NFIX = 0
-        FIXNODES = 0
+        NFIX = 0; FIXNODES = 0
+
+        IF (FIXSUBSETNODES.GT.0) THEN
+           ! Select subset of nodes from the network file that will actually get fixed
+           ALLNFIX = COUNT(ISFIXABLE)
+           ALLFIX = PACK((/(I, I = 1, NETP%NNODE)/),ISFIXABLE)
+           NFIX(1) = FIXSUBSETNODES
+           ! pickfix contains a list of all the nodes that will be fixed
+           CALL RANDSELECT_INT(ALLFIX(1:ALLNFIX),NFIX(1),.FALSE.,FIXNODES(:,1),FIXINDS)           
+           FIXVALS(1:NFIX(1),1) = SAVEFIXVAL
+        ELSE ! obligate and nonobligate fixed nodes will all be fixed
+           ISFIXED = ISFIXED.OR.ISFIXABLE
+        ENDIF
+
+        ! Now fix all the obligate nodes  (or all the marked nodes if not picking subset)        
         DO NC = 1,NETP%NNODE
            IF (ISFIXED(NC)) THEN
               NFIX(1) = NFIX(1) + 1
@@ -567,11 +590,11 @@ CONTAINS
               FIXVALS(NFIX(1),1) = SAVEFIXVAL
            ENDIF
         ENDDO
-        
-        PRINT*, 'Fixed nodes for field 1 only:', NFIX(1), FIXNODES(1:NFIX(1),1)
-        
+
+
+        PRINT*, 'Fixed nodes for field 1 only: #', NFIX(1), ', list:',  FIXNODES(1:NFIX(1),1)
      END IF
-     
+
      PRINT*, 'Setting up connectivity and edge lengths...'
 
      DO EID = 1,NEDGE
@@ -646,8 +669,8 @@ CONTAINS
         ! ENDIF
      ENDDO
 
-     
-     DEALLOCATE(EDGELENSET)
+     DEALLOCATE(EDGELENSET, ISFIXED, ALLFIX,ISFIXABLE)
+
      NETP%STRUCTURESET = .TRUE.
 
      ! set all nodes to default volume

@@ -77,7 +77,7 @@ MODULE KEYS
   ! --------------
   ! dynamics of fields over mesh
   ! --------------
-  INTEGER, PARAMETER :: MAXNABSORBER = 100  
+  INTEGER, PARAMETER :: MAXNABSORBER = 1000  
   INTEGER :: NABS(MAXNFIELD), NFIX(MAXNFIELD), NFIXCELL(MAXNFIELD), NFIELD
   INTEGER :: ABSORBERS(MAXNABSORBER,MAXNFIELD)
   INTEGER :: FIXNODES(MAXNABSORBER,MAXNFIELD), FIXCELLS(MAXNABSORBER,MAXNFIELD)
@@ -88,6 +88,8 @@ MODULE KEYS
   LOGICAL :: TRACKFIXNODEFLUX ! track flux out of fixed nodes rather than absorber nodes
   ! determine fixed nodes from the network file
   LOGICAL :: FIXNODEFROMNETFILE
+  ! how many of the marked nodes in the file should actually get fixed?
+  INTEGER :: FIXSUBSETNODES
   ! Fix nearest mesh cells to points selected in a circle
   LOGICAL :: RANDFIXPTS
   INTEGER :: NFIXPT(MAXNFIELD), FIXPTS(MAXNABSORBER,MAXNFIELD)

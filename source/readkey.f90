@@ -97,7 +97,11 @@ SUBROUTINE READKEY
   NFIXCELL = 0 ! number of fixed cells
   NFIXPT = 0 ! Number of fixed points
   FIXNODEFROMNETFILE = .false. ! determine fixed nodes based on network file
-
+  ! if fixing nodes from netfile, pick random subset of the ones marked
+  ! to actually get fixed
+  ! default to none
+  FIXSUBSETNODES = -1
+  
   ! Where to pick points in a circle
   FIXPTCENT = 0D0; FIXPTRAD = 1D0
 
@@ -431,6 +435,11 @@ SUBROUTINE READKEY
            DO I = 1,5
               CALL READF(FIXRECTANGLE(FC,I))
            ENDDO
+        CASE('FIXSUBSETNODES')
+           ! if fixing nodes from the network file, pick a random subset of
+           ! the nodes labeled FN to actually get fixed
+           FIXNODEFROMNETFILE = .TRUE.
+           CALL READI(FIXSUBSETNODES)
         CASE('KDEQUIL')
            CALL READF(KDEQUIL)
         CASE('KOFF')
