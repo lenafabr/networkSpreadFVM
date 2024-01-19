@@ -225,6 +225,14 @@ CONTAINS
        DSP%FIELDS = DSP%FIELDS + DFDT*DELT
        CURTIME = CURTIME+DELT
 
+       IF (MINVAL(DSP%FIELDS(:,1)) < -1D0) THEN
+          PRINT*, 'ERROR: NEGATIVE CONCENTRATION'
+          DO CC = 1,MESHP%NCELL
+             PRINT*, CC, MESHP%CELLTYPE(CC), DSP%FIELDS(CC,1)
+          ENDDO
+          STOP 1
+       ENDIF
+
        ! should we save a snapshot?
        IF (LOGSNAPSHOT) THEN
           TAKESNAP= (NEXTSNAPIND.LE.NSNAPSHOT.AND.STEP.EQ.SNAPSTEPLIST(NEXTSNAPIND))
@@ -725,7 +733,9 @@ CONTAINS
        ! get change in free ligand from delta total lig and delta total prot
        LKD = DSP%FIELDS(CC,1) + DSP%KDEQUIL;       
 
-      ! PRINT*, 'TESTX1:', CC, MESHP%CELLTYPE(CC), MESHP%NODEIND(CC), MESHP%EDGEIND(CC,1), MESHP%RESVIND(CC)
+       ! if (CC.EQ.12000) THEN
+       !    PRINT*, 'TESTX1:', CC, MESHP%CELLTYPE(CC), MESHP%NODEIND(CC), MESHP%EDGEIND(CC,1), MESHP%RESVIND(CC), dsp%fields(cc,:)
+       ! ENDIF
        !print*, 'testx2:', dfdt(cc,1)       
        DFDT(CC,1) = (DFDT(CC,1) - DSP%FIELDS(CC,1)*DFDT(CC,2)/LKD)/ &            
             & (1 + DSP%FIELDS(CC,2)*DSP%KDEQUIL/LKD**2)                       
@@ -740,5 +750,6 @@ CONTAINS
           IF (DSP%ISFIXED(CC,FC)) DFDT(CC,FC) = 0D0
        ENDDO
     ENDDO
+   
   END SUBROUTINE EULERSTEPEQUIL
 END MODULE FVMDYNAMICS
