@@ -723,10 +723,12 @@ CONTAINS
                      
        ! get change in free ligand from delta total lig and delta total prot
        LKD = DSP%FIELDS(CC,1) + DSP%KDEQUIL;       
-       
+
+       print*, 'TESTX1:', CC, MESHP%CELLTYPE(CC), MESHP%NODEIND(CC), &
+            & MESHP%EDGEIND(CC,1), MESHP%RESVIND(CC)
        DFDT(CC,1) = (DFDT(CC,1) - DSP%FIELDS(CC,1)*DFDT(CC,2)/LKD)/ &            
             & (1 + DSP%FIELDS(CC,2)*DSP%KDEQUIL/LKD**2)                       
-      
+
     ENDDO
 
     ! no change in fixed cells

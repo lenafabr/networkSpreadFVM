@@ -452,6 +452,8 @@ CONTAINS
      CLOSE(NF)
 
      PRINT*, 'Number of nodes, edges, loops, dimension: ', NNODE, NEDGE, NLOOP,DIM
+     PRINT*, 'MAXRESV:', MAXRESV
+     
      ! allocate arrays         
      CALL SETUPNETWORK(NETP,NNODE,NEDGE,MAXRESV,NLOOP,DIM,NFIELD,MAXBRANCH,MAXLOOPLEN,&
           & ABSORBERS,NABS)
@@ -759,6 +761,8 @@ CONTAINS
     
     WRITE(FU,*) ''
     CLOSE(FU)
+
+    STOP 1
     
   END SUBROUTINE OUTPUTNETWORK
 

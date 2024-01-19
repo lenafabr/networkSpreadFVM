@@ -323,6 +323,7 @@ CONTAINS
        ! number of connected cells
        D1 = NETP%RESVNNODE(RC)
        MESHP%DEG(CT) = D1
+       print*, 'TESTX1:', CT, D1
        ! place position of cell at average of connected nodes
        MESHP%POS(CT,:)= SUM(NETP%NODEPOS(NETP%RESVNODES(RC,1:D1),:),1)/D1
     ENDDO    
