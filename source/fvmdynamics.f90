@@ -649,6 +649,8 @@ CONTAINS
                      & + DSP%DCOEFF(1)*(DSP%FIELDS(BC,1) - DSP%FIELDS(CC,1))/MESHP%LENPM(CC,BCt) &
                      & + DSP%DCOEFF(2)*(BFIELD(BC) - BFIELD(CC))/MESHP%LENPM(CC,BCt)                
 
+               ! print*, 'TESTX6:', BCT, BC, DSP%FIELDS(BC,1), DSP%FIELDS(CC,1), &
+                !     & BFIELD(BC), BFIELD(CC), MESHP%LENPM(CC,BCT)
                 ! get diffusive flux of  total protein 
                 FLUXDIFF(2) = FLUXDIFF(2) + DSP%DCOEFF(2)*(DSP%FIELDS(BC,2) - DSP%FIELDS(CC,2))/MESHP%LENPM(CC,BCt)
              END IF
@@ -700,7 +702,6 @@ CONTAINS
           ENDDO
        ENDIF
 
-!       print*, 'TESTX1:', CC, meshp%celltype(cc), meshp%resvind(cc), FLUXDIFF, FLUXADV, MESHP%VOL(CC)
        DFDT(CC,:) = (FLUXDIFF+FLUXADV)/MESHP%VOL(CC)
        ! DO FC = 1,DSP%NFIELD
        !    IF (.NOT.DSP%MOBILEFIELD(FC)) THEN
@@ -723,10 +724,11 @@ CONTAINS
                      
        ! get change in free ligand from delta total lig and delta total prot
        LKD = DSP%FIELDS(CC,1) + DSP%KDEQUIL;       
-       
+
+      ! PRINT*, 'TESTX1:', CC, MESHP%CELLTYPE(CC), MESHP%NODEIND(CC), MESHP%EDGEIND(CC,1), MESHP%RESVIND(CC)
+       !print*, 'testx2:', dfdt(cc,1)       
        DFDT(CC,1) = (DFDT(CC,1) - DSP%FIELDS(CC,1)*DFDT(CC,2)/LKD)/ &            
             & (1 + DSP%FIELDS(CC,2)*DSP%KDEQUIL/LKD**2)                       
-      
     ENDDO
 
     ! no change in fixed cells

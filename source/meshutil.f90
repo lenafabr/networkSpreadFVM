@@ -561,15 +561,21 @@ CONTAINS
     ELSE
        MINCC = 1
     ENDIF
-    
+     
     DO CC = MINCC,MESHP%NCELL
-       IF (MESHP%CELLTYPE(CC).EQ.2) THEN ! reservoir cells only
+       IF (MESHP%CELLTYPE(CC).EQ.2) THEN ! implicit reservoir cells only
           RC = MESHP%RESVIND(CC) ! which reservoir is this?
-          MESHP%LEN(CT) = NETP%RESVLEN(RC)/2*MESHP%DEG(CC)
+          MESHP%LEN(CC) = NETP%RESVLEN(RC)/2*MESHP%DEG(CC)
        ENDIF
     ENDDO
 
-   
+    ! check that length is defined for all cells
+    DO CC = 1,MESHP%NCELL
+       IF (MESHP%LEN(CC).LE.0D0) THEN
+          PRINT*, 'ERROR: negative length found.', CC, MESHP%CELLTYPE(CC)
+          STOP 1
+       ENDIF
+    ENDDO   
     
     ! For each cell, get the length to each neighboring cell
     DO CT = 1,MESHP%NCELL
@@ -660,6 +666,7 @@ CONTAINS
           ENDIF
        ENDDO
     ENDDO
+
     
   END SUBROUTINE SETUPNETWORKMESH  
 
@@ -1002,6 +1009,7 @@ CONTAINS
     MESHP%BOUNDEDGE = 0
     MESHP%BOUNDDIR = 0
     MESHP%DEG = 0
+    MESHP%LEN=-1D0
 
     MESHP%BOUNDCLOSED = .FALSE.
   END SUBROUTINE ALLOCATEMESH
