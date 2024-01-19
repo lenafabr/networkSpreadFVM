@@ -79,6 +79,7 @@ CONTAINS
              STOP 1
           ENDIF
 
+          NETP%RESVLEN(RC) = RESVVOL(RC)
           NETP%RESVVOL(RC) = RESVVOL(RC)
           NETP%RESVSA(RC) = RESVSA(RC)
           NETP%RESVMIX(RC) = RESVMIX(RC)

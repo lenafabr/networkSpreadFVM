@@ -665,12 +665,22 @@ CONTAINS
         IF (NETP%RESVNNODE(RC).GE.1) THEN
            PRINT*, RC, NETP%RESVNNODE(RC),NETP%RESVNODES(RC,1:NETP%RESVNNODE(RC))
         ENDIF
-        ! IF (NETP%RESVNNODE(RC).LT.1) THEN
-        !    PRINT*, 'ERROR: reservoir with no nodes', RC
-        !    STOP 1
-        ! ENDIF
+        IF (NETP%RESVNNODE(RC).LT.1) THEN
+            PRINT*, 'ERROR: reservoir with no nodes. &
+                 & NOTE: might have to turn this off for explicit reservoirs.&
+                 & Not sure...', RC
+            STOP 1
+        ENDIF
      ENDDO
 
+     IF (ANY(NETP%NODEDEG.LE.0)) THEN
+        PRINT*, 'ERROR: when reading network, found nodes of non-positive degree'
+        DO NC = 1,NETP%NNODE
+           IF (NETP%NODEDEG(NC).LE.0) PRINT*, NC, NETP%NODEDEG(NC)
+        ENDDO
+        STOP 1
+     ENDIF
+     
      DEALLOCATE(EDGELENSET, ISFIXED, ALLFIX,ISFIXABLE)
 
      NETP%STRUCTURESET = .TRUE.
@@ -762,8 +772,6 @@ CONTAINS
     WRITE(FU,*) ''
     CLOSE(FU)
 
-    STOP 1
-    
   END SUBROUTINE OUTPUTNETWORK
 
  
