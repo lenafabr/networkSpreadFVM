@@ -9,8 +9,8 @@ MODULE DYNSYSUTIL
   TYPE DYNSYSTEM
      INTEGER :: NFIELD=0 ! number of fields
      ! spatially uniform diffusion coefficient for each field
-     DOUBLE PRECISION, POINTER :: DCOEFF(:) 
-          
+     DOUBLE PRECISION, POINTER :: DCOEFF(:)
+               
      ! pointer to a mesh object
      TYPE(MESH), POINTER :: MESHP
      ! flow velocities across each cell boundary
@@ -31,8 +31,11 @@ MODULE DYNSYSUTIL
      ! For dealing with buffers
      ! ------------
 
-     ! buffer type: 0 = no buffer, 1 = explicit on/off rates, 2 = equilibrated
+     ! buffer type: 0 = no buffer, 1 = explicit on/off rates,
+     ! 2 = equilibrated with total buffer sites tracked as a field
      INTEGER :: BUFFERTYPE=0
+     ! Assume spatially uniform buffer?
+     LOGICAL :: UNIFORMBUFFER
      LOGICAL :: DOACTIVATION 
      ! explicit on/off rates or equilibrium dissociation constant
      DOUBLE PRECISION :: KON, KOFF, KDEQUIL
@@ -319,11 +322,13 @@ CONTAINS
 
   END SUBROUTINE INITIALIZEFIELDEDGES
   
-  SUBROUTINE OUTPUTFIELDS(DSP,OUTFILE,INFO,APPEND)
+  SUBROUTINE OUTPUTFIELDS(DSP,OUTFILE,INFO,APPEND,OUTPUT1FIELD)
     ! output field values
     ! INFO is a list of floats containing additional information that gets dumped before the fields
     ! append: whether or not to append to previous file
     ! Snapshotvel=1 means include boundary velocities in the snapshot as well
+    ! optionally: OUTPUT1FIELD = integer setting single field to output.
+    ! if not provided (or if negative), outputs all
     USE KEYS, ONLY : SNAPSHOTVEL
     
     
@@ -333,9 +338,11 @@ CONTAINS
     CHARACTER(LEN=*), INTENT(IN) :: OUTFILE
     DOUBLE PRECISION, INTENT(IN) :: INFO(:)
     LOGICAL, INTENT(IN) :: APPEND
+    INTEGER, INTENT(IN), OPTIONAL :: OUTPUT1FIELD
     INTEGER, PARAMETER :: OU = 99
-    INTEGER :: FC, CELLTYPE(DSP%MESHP%NCELL), CC
-
+    INTEGER :: FC, CELLTYPE(DSP%MESHP%NCELL), CC, NFIELD
+    LOGICAL :: DOOUTPUT1
+    
     IF (APPEND) THEN
        OPEN(UNIT=OU, FILE=OUTFILE, ACCESS='APPEND')
     ELSE
@@ -349,20 +356,34 @@ CONTAINS
     ! DO CC = 1, DSP%MESHP%NCELL
     !    IF (CELLTYPE(CC).EQ.2) CELLTYPE(CC) = -DSP%MESHP%RESVIND(CC)
     ! ENDDO
+
     
+
+    DOOUTPUT1 = .FALSE.; NFIELD = DSP%NFIELD
+    
+    IF (PRESENT(OUTPUT1FIELD)) THEN       
+       IF (OUTPUT1FIELD.GE.0) THEN
+          DOOUTPUT1 = .TRUE.
+          NFIELD = 1
+       ENDIF
+    ENDIF
+          
     ! write info line: number of fields, number of cells, max degree,
     ! followed by extra info
-    WRITE(OU,*) DSP%NFIELD, DSP%MESHP%NCELL, DSP%MESHP%MAXDEG, INFO, SNAPSHOTVEL
-    ! write another info line: type of each cell
-   ! WRITE(OU,*) CELLTYPE
+    WRITE(OU,*) NFIELD, DSP%MESHP%NCELL, DSP%MESHP%MAXDEG, INFO, SNAPSHOTVEL
     IF (SNAPSHOTVEL.GT.0) THEN
-    ! write velocities across each boundary
+       ! write velocities across each boundary
        WRITE(OU,*) DSP%VEL
     END IF
-    ! for each field, write field values for all cells
-    DO FC = 1,DSP%NFIELD
-       WRITE(OU,*) DSP%FIELDS(:,FC)
-    ENDDO
+    IF (DOOUTPUT1) THEN
+       ! write values for 1 field
+       WRITE(OU,*) DSP%FIELDS(:,OUTPUT1FIELD)
+    ELSE
+       ! for each field, write field values for all cells
+       DO FC = 1,DSP%NFIELD
+          WRITE(OU,*) DSP%FIELDS(:,FC)
+       ENDDO
+    ENDIF
     
     CLOSE(OU)
     
@@ -380,7 +401,8 @@ CONTAINS
          & ALLOWFIXEDRESV, DORESERVOIRS, ALLOWRESVFIX, &
          & NFIXCELL, RANDFIXCELLS,FIXCELLS, RANDFIXPTS,FIXPTS,NFIXPT,FIXPTCENT,&
          & FIXPTRAD, MAXNABSORBER, MAXNFIELD,NPERMPOS,PERMPOS,POSPERMEABILITY, USEVARRAD, &
-         & RANDFIXRESV, FIXPTMAXDIST, FIXPTEXCENT, FIXPTEXRAD, USEEDGEFLOW, USERESVELEMENTS, CONCENTRATIONS3D
+         & RANDFIXRESV, FIXPTMAXDIST, FIXPTEXCENT, FIXPTEXRAD, USEEDGEFLOW, USERESVELEMENTS, &
+         & UNIFORMBUFFER, CONCENTRATIONS3D
     USE NETWORKUTIL, ONLY : NETWORK
     USE GENUTIL, ONLY : RANDSELECT_INT
     USE MT19937, ONLY : RANDUNIFCIRCLE
@@ -448,14 +470,16 @@ CONTAINS
     DSP%DCOEFF = DCOEFF(1:DSP%NFIELD)
     DSP%VEL = 0D0
     DSP%MOBILEFIELD = MOBILEFIELD(1:DSP%NFIELD)       
+
+    DSP%UNIFORMBUFFER = UNIFORMBUFFER
     
     ! ------------------
     ! Check buffer type matches number of fields
-    ! ------------------
+    ! ------------------    
     IF (DOBUFFER) THEN
-       IF (FASTEQUIL) THEN
+       IF (FASTEQUIL) THEN          
           DSP%BUFFERTYPE = 2
-          NFIELD = 2          
+          NFIELD = 2
        ELSE
           DSP%BUFFERTYPE = 1
           NFIELD = 3         

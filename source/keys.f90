@@ -17,6 +17,7 @@ MODULE KEYS
   ! logarithmic spacing of snapshots?
   LOGICAL :: LOGSNAPSHOT
   INTEGER :: NSNAPSHOT ! how many snapshots to use with logarithmic spacing
+  INTEGER :: OUTPUT1FIELD ! only output a particular field
   
   ! ------------
   ! network geometry and setup
@@ -140,7 +141,8 @@ MODULE KEYS
   INTEGER :: STARTEQUIL
 
   ! Evolve buffer proteins? Rapidly equilibrating proteins?
-  LOGICAL :: DOBUFFER, FASTEQUIL
+  ! Assume spatially uniform buffer?
+  LOGICAL :: DOBUFFER, FASTEQUIL, UNIFORMBUFFER
   DOUBLE PRECISION :: KON, KOFF !(on/off rates for buffer prots)
   DOUBLE PRECISION :: KDEQUIL ! (dissociation constant for rapidly equilibrating proteins)
 

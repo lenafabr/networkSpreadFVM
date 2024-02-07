@@ -16,7 +16,7 @@ CONTAINS
     USE KEYS, ONLY : OUTFILE, SNAPSHOTFILE, OUTPUTEVERY, PRINTEVERY, &
          & SNAPSHOTEVERY, TRACKFIXNODEFLUX, VERBOSE, DOFLOW, CONTFILE, &
          & OUTPUTEVERYSWITCH, OUTPUTEVERYSTART, TRACKFLUXPERM, OUTPUTTOTFLUXONLY, &
-         & LOGSNAPSHOT, NSNAPSHOT
+         & LOGSNAPSHOT, NSNAPSHOT,OUTPUT1FIELD
     !USE mt19937, ONLY : GRND
     USE NETWORKUTIL, ONLY : NETWORK, OUTPUTNETWORK
     USE MESHUTIL, ONLY : MESH, OUTPUTMESH
@@ -83,7 +83,7 @@ CONTAINS
     IF (SNAPSHOTEVERY.GT.0.OR.(LOGSNAPSHOT.AND.NSNAPSHOT.GT.0)) THEN
        ! dump original field values
        INFO = CURTIME
-       CALL OUTPUTFIELDS(DSP,SNAPSHOTFILE,INFO,.FALSE.)
+       CALL OUTPUTFIELDS(DSP,SNAPSHOTFILE,INFO,.FALSE.,OUTPUT1FIELD)
 
        IF (VELCONTROL.EQ.'NODECONTRACTIONS') THEN
           ! output node contraction status
@@ -247,7 +247,7 @@ CONTAINS
           ! save snapshot of the fields to a file
           INFO = CURTIME
           !PRINT*, 'TESTX1:', STEP, CURTIME, NEXTSNAPIND, snapsteplist(nextsnapind)
-          CALL OUTPUTFIELDS(DSP,SNAPSHOTFILE,INFO,.TRUE.)
+          CALL OUTPUTFIELDS(DSP,SNAPSHOTFILE,INFO,.TRUE.,OUTPUT1FIELD)
 
           IF (VELCONTROL.EQ.'NODECONTRACTIONS') THEN
              ! output node contraction status
@@ -576,7 +576,7 @@ CONTAINS
     DFDT = 0D0
 
     MESHP=>DSP%MESHP
-
+    
     ! get field of bound ligand
     BFIELD = DSP%FIELDS(:,1)*DSP%FIELDS(:,2)/(DSP%FIELDS(:,1)+DSP%KDEQUIL)
     ! Get field of total ligand
@@ -593,7 +593,7 @@ CONTAINS
        ! ENDIF
        
        ! diffusive flux (of total ligand and total protein)
-       FLUXDIFF = 0D0
+       FLUXDIFF = 0D0; 
        DO BCT = 1,DEG ! boundary counter
           BC = MESHP%BOUNDS(CC,BCT) ! boundary cell
           IF (BC.GT.0) THEN
@@ -613,17 +613,18 @@ CONTAINS
                 ! area of cell boundary
                 ABOUND = MESHP%BOUNDAREA(CC,BCT)
 
-                ! flux for total ligand
+                ! flux for total ligand                
                 FLUXDIFF(1) = FLUXDIFF(1) &
                      & + DSP%DCOEFF(1)/DSCL*ABOUND*(DSP%FIELDS(BC,1) &
                      & - DSP%FIELDS(CC,1))/MESHP%LENPM(CC,BCt) &
                      & + DSP%DCOEFF(2)/DSCL*ABOUND*(BFIELD(BC) - BFIELD(CC))/MESHP%LENPM(CC,BCT)
-
-                ! flux for total protein
-                FLUXDIFF(2) = FLUXDIFF(2) + &
-                     & DSP%DCOEFF(2)/DSCL*ABOUND*&
-                     & (DSP%FIELDS(BC,2) - DSP%FIELDS(CC,2))/MESHP%LENPM(CC,BCT)
                 
+                IF (.NOT.DSP%UNIFORMBUFFER) THEN ! spatially varying buffer sites
+                   ! flux for total protein
+                   FLUXDIFF(2) = FLUXDIFF(2) + &
+                        & DSP%DCOEFF(2)/DSCL*ABOUND*&
+                        & (DSP%FIELDS(BC,2) - DSP%FIELDS(CC,2))/MESHP%LENPM(CC,BCT)
+                ENDIF
              ELSEIF (DSP%VARRAD) THEN
                 ! mesh cells can have varying radii
                 ! but still working with 1D concentrations
@@ -643,11 +644,12 @@ CONTAINS
                      & + DSP%DCOEFF(1)/DSCL*ABOUND*(DSP%FIELDS(BC,1)/A1 &
                      & - DSP%FIELDS(CC,1)/A2)/MESHP%LENPM(CC,BCt) &
                      & + DSP%DCOEFF(2)/DSCL*ABOUND*(BFIELD(BC)/A1 - BFIELD(CC)/A2)/MESHP%LENPM(CC,BCT)
-
-                ! flux for total protein
-                FLUXDIFF(2) = FLUXDIFF(2) + &
-                     & DSP%DCOEFF(2)/DSCL*ABOUND*&
-                     & (DSP%FIELDS(BC,2)/A1 - DSP%FIELDS(CC,2)/A2)/MESHP%LENPM(CC,BCT)
+                IF (.NOT.DSP%UNIFORMBUFFER) THEN ! spatially varying buffer conc
+                   ! flux for total protein
+                   FLUXDIFF(2) = FLUXDIFF(2) + &
+                        & DSP%DCOEFF(2)/DSCL*ABOUND*&
+                        & (DSP%FIELDS(BC,2)/A1 - DSP%FIELDS(CC,2)/A2)/MESHP%LENPM(CC,BCT)
+                ENDIF
              ELSE
                 ! flux across each boundary defined as
                 ! D*(w_(j+1)-w_j)/h+
@@ -656,11 +658,10 @@ CONTAINS
                 FLUXDIFF(1) = FLUXDIFF(1) &
                      & + DSP%DCOEFF(1)*(DSP%FIELDS(BC,1) - DSP%FIELDS(CC,1))/MESHP%LENPM(CC,BCt) &
                      & + DSP%DCOEFF(2)*(BFIELD(BC) - BFIELD(CC))/MESHP%LENPM(CC,BCt)                
-
-               ! print*, 'TESTX6:', BCT, BC, DSP%FIELDS(BC,1), DSP%FIELDS(CC,1), &
-                !     & BFIELD(BC), BFIELD(CC), MESHP%LENPM(CC,BCT)
-                ! get diffusive flux of  total protein 
-                FLUXDIFF(2) = FLUXDIFF(2) + DSP%DCOEFF(2)*(DSP%FIELDS(BC,2) - DSP%FIELDS(CC,2))/MESHP%LENPM(CC,BCt)
+                IF (.NOT.DSP%UNIFORMBUFFER) THEN  ! spatially varying buffer conc
+                   ! get diffusive flux of  total protein 
+                   FLUXDIFF(2) = FLUXDIFF(2) + DSP%DCOEFF(2)*(DSP%FIELDS(BC,2) - DSP%FIELDS(CC,2))/MESHP%LENPM(CC,BCt)
+                ENDIF
              END IF
           ENDIF
        ENDDO
@@ -673,6 +674,7 @@ CONTAINS
              PRINT*, 'USEVARRAD AND CONC3D not set up together with edge flows'
              STOP 1
           ENDIF
+          
           ! WARNING: this has not been thoroughly thought through for the case where there are flows
           ! going across boundaries to large reservoirs!       
           DO BCT = 1,DEG
@@ -685,7 +687,9 @@ CONTAINS
 
                 ! TOTAL ligand
                 ! Weighted average of field on boundary
-                IF (.NOT.DSP%MOBILEFIELD(2)) THEN ! immobile proteins, only free ligand feels flow
+               
+                IF (.NOT.DSP%MOBILEFIELD(2)) THEN
+                   ! immobile proteins, only free ligand feels flow
                    WAVG(1) = (MESHP%LEN(BC)/MESHP%DEG(BC)*DSP%FIELDS(CC,1) &
                         & + MESHP%LEN(CC)/MESHP%DEG(CC)*DSP%FIELDS(BC,1))/MESHP%LENPM(CC,BCT)
                    WSHIFT(1) = WAVG(1) - DELT/2/MESHP%LENPM(CC,BCT)*DSP%VEL(CC,BCT)*MESHP%BOUNDDIR(CC,BCT)&
@@ -701,9 +705,8 @@ CONTAINS
                         & + MESHP%LEN(CC)/MESHP%DEG(CC)*DSP%FIELDS(BC,2))/MESHP%LENPM(CC,BCT)
                    WSHIFT(2) = WAVG(2) - &
                         & DELT/2/MESHP%LENPM(CC,BCT)*DSP%VEL(CC,BCT)*MESHP%BOUNDDIR(CC,BCT)&
-                        & *(DSP%FIELDS(BC,2) - DSP%FIELDS(CC,2))  
+                        & *(DSP%FIELDS(BC,2) - DSP%FIELDS(CC,2))                     
                 ENDIF
-
                 ! advective flux for total ligand and total protein
                 FLUXADV = FLUXADV - MESHP%BOUNDDIR(CC,BCT)*DSP%VEL(CC,BCT)*WSHIFT
              ENDIF
@@ -731,14 +734,14 @@ CONTAINS
        ENDIF
                      
        ! get change in free ligand from delta total lig and delta total prot
-       LKD = DSP%FIELDS(CC,1) + DSP%KDEQUIL;       
-
-       ! if (CC.EQ.12000) THEN
-       !    PRINT*, 'TESTX1:', CC, MESHP%CELLTYPE(CC), MESHP%NODEIND(CC), MESHP%EDGEIND(CC,1), MESHP%RESVIND(CC), dsp%fields(cc,:)
-       ! ENDIF
-       !print*, 'testx2:', dfdt(cc,1)       
-       DFDT(CC,1) = (DFDT(CC,1) - DSP%FIELDS(CC,1)*DFDT(CC,2)/LKD)/ &            
-            & (1 + DSP%FIELDS(CC,2)*DSP%KDEQUIL/LKD**2)                       
+       LKD = DSP%FIELDS(CC,1) + DSP%KDEQUIL;
+       IF (DSP%UNIFORMBUFFER) THEN ! spatially constant buffer
+          DFDT(CC,1) = DFDT(CC,1)/ &            
+               & (1 + DSP%FIELDS(CC,2)*DSP%KDEQUIL/LKD**2)
+       ELSE
+          DFDT(CC,1) = (DFDT(CC,1) - DSP%FIELDS(CC,1)*DFDT(CC,2)/LKD)/ &            
+               & (1 + DSP%FIELDS(CC,2)*DSP%KDEQUIL/LKD**2)
+       ENDIF
     ENDDO
 
     ! no change in fixed cells

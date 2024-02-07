@@ -60,6 +60,12 @@ SUBROUTINE READKEY
   ! output flux more often at the start
   OUTPUTEVERYSTART = 1D1
   OUTPUTEVERYSWITCH = 0
+
+  ! Only output 1 field to snapshots
+  ! default (negative) means output all
+  OUTPUT1FIELD = -1
+  ! assume spatially uniform buffer
+  UNIFORMBUFFER = .FALSE.
   
   ! network parameters
   MAXBRANCH = 10 ! max number of branches per node
@@ -397,7 +403,7 @@ SUBROUTINE READKEY
               CALL READO(FASTEQUIL)
            ELSE
               FASTEQUIL = .TRUE.
-           ENDIF
+           ENDIF         
         CASE('FIXCONTRACTIONS')
            IF (NITEMS.GT.1) THEN
               CALL READO(FIXCONTRACTIONS)
@@ -476,6 +482,8 @@ SUBROUTINE READKEY
         CASE('OUTFILE')
            CALL READA(OUTFILE)
            IF (NITEMS.GT.2) CALL READI(OUTPUTEVERY)
+        CASE('OUTPUT1FIELD')
+           CALL READI(OUTPUT1FIELD)
         CASE('OUTPUTEVERY')
            CALL READI(OUTPUTEVERY)
         CASE('OUTPUTEVERYSTART')
@@ -680,6 +688,12 @@ SUBROUTINE READKEY
               CALL READO(TRACKFLUXPERM)
            ELSE
               TRACKFLUXPERM = .TRUE.
+           ENDIF
+        CASE('UNIFORMBUFFER')
+           IF (NITEMS.GT.1) THEN
+              CALL READO(UNIFORMBUFFER)
+           ELSE
+              UNIFORMBUFFER = .TRUE.
            ENDIF
         CASE('USEEDGEFLOW')
            IF (NITEMS.GT.1) THEN
