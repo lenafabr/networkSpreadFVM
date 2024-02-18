@@ -173,5 +173,8 @@ MODULE KEYS
   ! include flow calculations?
   ! treat concentrations as 3D?
   LOGICAL :: USEEDGEFLOW, CONCENTRATIONS3D
+
+  ! Periodic global permeability
+  DOUBLE PRECISION :: PERIODGLOBALPERM, DURGLOBALPERM
   
 END MODULE KEYS

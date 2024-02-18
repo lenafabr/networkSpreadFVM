@@ -167,6 +167,12 @@ SUBROUTINE READKEY
   PERMEABILITY =0D0
   NPERM = 0 ! number of permeable nodes
 
+  ! periodically turn on global permeability
+  ! this sets the period (do not do this if negative)
+  PERIODGLOBALPERM = -1D0
+  ! this sets the duration of the permeable stretch
+  DURGLOBALPERM = 0D0
+  
   NPERMPOS = 0 ! number of permeable center positions
   ! permeability around each position
   POSPERMEABILITY = 0D0
@@ -497,6 +503,13 @@ SUBROUTINE READKEY
            ENDIF
         CASE('PBOUNDCLOSE')
            CALL READF(PBOUNDCLOSE)
+        CASE('PERIODICGLOBALPERM')
+           CALL READF(PERIODGLOBALPERM)
+           CALL READF(DURGLOBALPERM)
+           DO I = 1,min(NITEMS-3,MAXNFIELD)
+              ! permeability for each field
+              CALL READF(PERMEABILITY(1,I))
+           ENDDO           
         CASE('PERMFROMFILE')
            IF (NITEMS.GT.1) THEN
               CALL READO(PERMFROMFILE)
