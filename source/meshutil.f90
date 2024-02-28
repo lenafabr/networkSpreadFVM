@@ -113,18 +113,24 @@ CONTAINS
     EDGECLOSED = .FALSE. ! which edges have a closure along them
     
     DO CC = 1,MESHP%NCELL
+       ! only close boundaries between edge-edge or edge-node cells
+       IF (MESHP%CELLTYPE(CC).EQ.2) CYCLE
+       
        DO BCC = 1,MESHP%DEG(CC)          
           ! this boundary has already been checked for closing
-          IF (ISDONE(CC,BCC)) CONTINUE
+          IF (ISDONE(CC,BCC)) CYCLE
 
           ! cell connected to through this boundary
           BC = MESHP%BOUNDS(CC,BCC)
           IF (BC.GT.0) THEN ! there is a neighbor cell across this boundary
+             IF (MESHP%CELLTYPE(CC).EQ.2) CYCLE ! do not close boundary to reservoir
              DO BCC2 = 1,MESHP%DEG(BC) ! find back-connecting index from the neighbor cell
                 IF (MESHP%BOUNDS(BC,BCC2).EQ.CC) EXIT
              ENDDO
              ISDONE(BC,BCC2) = .TRUE. ! already checked boundary for connected cell
           ENDIF
+
+          !IF (CC.GT.1600) PRINT*, 'TESTX2:', CC, BC, BCC, BCC2, ISDONE(16347,1)
           
           IF (MESHP%BOUNDCLOSED(CC,BCC)) THEN
              ! already closed, decide whether to open
@@ -148,6 +154,7 @@ CONTAINS
              ELSE
                 ! close/open rates are actually probabilities
                 PCLOSE = CLOSERATEPERLEN*MESHP%LENPM(CC,BCC)
+                !PRINT*, 'TESTX1:', CC, BCC,  BC, meshp%edgeind(cc,:), PCLOSE, MESHP%LENPM(CC,BCC)
              ENDIF
 
              IF (GRND().LT.PCLOSE) THEN
