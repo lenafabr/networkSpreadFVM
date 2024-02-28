@@ -90,7 +90,92 @@ CONTAINS
     
   END SUBROUTINE EDGETOBOUND
 
-  SUBROUTINE CLOSEBOUNDS(MESHP, PCLOSE)    
+  SUBROUTINE CLOSEBOUNDS(MESHP,CLOSERATEPERLEN,OPENRATE,EDGECLOSED,DELT)
+    ! for each edge, randomly close of a mesh cell boundary along that edge    
+    ! PCLOSEPERLEN = closing probability per length (use LENPM for the length surrounding each boundary)
+    ! each mesh boundary is able to close or open independently
+    ! POPEN = probability of opening an already closed edge
+    ! DELT: if provided, then treat CLOSERATEPERLEN, OPENRATE as rates and DELT as the relevant timestep
+    ! if DELT not provided, then CLOSERATEPERLEN, OPENRATE are treated directly as probabilities
+    USE MT19937, ONLY : GRND
+    IMPLICIT NONE
+    TYPE(MESH), POINTER :: MESHP
+    DOUBLE PRECISION, INTENT(IN) :: CLOSERATEPERLEN, OPENRATE
+    LOGICAL, INTENT(OUT) :: EDGECLOSED(:)
+    DOUBLE PRECISION, INTENT(IN), OPTIONAL :: DELT
+    LOGICAL :: ISDONE(MESHP%NCELL,MESHP%MAXDEG)
+    INTEGER :: CC, BC, BCC, BCC2
+    DOUBLE PRECISION :: PCLOSE, POPEN
+    
+    ! go through and decide which boundaries to close
+    
+    ISDONE = .FALSE. ! Which boundaries have already been checked
+    EDGECLOSED = .FALSE. ! which edges have a closure along them
+    
+    DO CC = 1,MESHP%NCELL
+       DO BCC = 1,MESHP%DEG(CC)          
+          ! this boundary has already been checked for closing
+          IF (ISDONE(CC,BCC)) CONTINUE
+
+          ! cell connected to through this boundary
+          BC = MESHP%BOUNDS(CC,BCC)
+          IF (BC.GT.0) THEN ! there is a neighbor cell across this boundary
+             DO BCC2 = 1,MESHP%DEG(BC) ! find back-connecting index from the neighbor cell
+                IF (MESHP%BOUNDS(BC,BCC2).EQ.CC) EXIT
+             ENDDO
+             ISDONE(BC,BCC2) = .TRUE. ! already checked boundary for connected cell
+          ENDIF
+          
+          IF (MESHP%BOUNDCLOSED(CC,BCC)) THEN
+             ! already closed, decide whether to open
+             IF (PRESENT(DELT)) THEN
+                ! input rates treated as rates
+                POPEN = 1D0 - EXP(-DELT*OPENRATE)
+             ELSE
+                ! close/open rates are actually probabilities
+                POPEN = OPENRATE
+             ENDIF
+             
+             IF (GRND().LT.POPEN) THEN
+                MESHP%BOUNDCLOSED(CC,BCC) = .FALSE.
+                IF (BC.GT.0) MESHP%BOUNDCLOSED(BC,BCC2) = .FALSE.
+             ENDIF
+          ELSE ! Currently open, decide whether to close
+             ! probability of closing for this boundary
+             IF (PRESENT(DELT)) THEN
+                ! input rates treated as rates
+                PCLOSE = 1D0 - EXP(-DELT*CLOSERATEPERLEN*MESHP%LENPM(CC,BCC))
+             ELSE
+                ! close/open rates are actually probabilities
+                PCLOSE = CLOSERATEPERLEN*MESHP%LENPM(CC,BCC)
+             ENDIF
+
+             IF (GRND().LT.PCLOSE) THEN
+                MESHP%BOUNDCLOSED(CC,BCC) = .TRUE.
+                ! close the boundary for the connected cell as well
+                IF (BC.GT.0) MESHP%BOUNDCLOSED(BC,BCC2) = .TRUE.
+             ENDIF
+          ENDIF
+
+          ! count up total boundaries and number that are closed
+          !IF (MESHP%BOUNDCLOSED(CC,BCC)) NCLOSED = NCLOSED+1
+          !NTOT = NTOT+1
+
+          ! keep track of which edges have a closed boundary          
+          IF (MESHP%BOUNDCLOSED(CC,BCC)) THEN
+             IF (MESHP%CELLTYPE(CC).EQ.1) THEN
+                EDGECLOSED(MESHP%EDGEIND(CC,1)) = .TRUE.
+             ELSEIF (MESHP%CELLTYPE(BC).EQ.1) THEN
+                EDGECLOSED(MESHP%EDGEIND(BC,1)) = .TRUE.
+             ENDIF
+          ENDIF             
+       ENDDO
+    ENDDO
+
+!    FRACCLOSED = DBLE(NCLOSED)/NTOT
+  END SUBROUTINE CLOSEBOUNDS
+  
+  SUBROUTINE CLOSEBOUNDSOLD(MESHP, PCLOSE)    
     ! randomly close off some of the mesh-cell boundaries
     ! pclose = probability each cell boundary is closed
     USE MT19937, ONLY : GRND
@@ -130,7 +215,7 @@ CONTAINS
     ENDDO
 
     PRINT*, 'Closed N boundaries out of total:', NCLOSE, NTOT/2, PTRY, PCLOSE
-  END SUBROUTINE CLOSEBOUNDS
+  END SUBROUTINE CLOSEBOUNDSOLD
   
   SUBROUTINE SETUPNETWORKMESH(MESHP,NETP,MAXCELLLEN,MINNCELL,CONC3D,RESVP)
     IMPLICIT NONE

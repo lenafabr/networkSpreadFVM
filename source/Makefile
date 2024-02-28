@@ -1,5 +1,3 @@
-#OBJS = keys.o readkey.o genutil.o mt19937.o inputparams.o networkutil.o  sort2int.o meshutil.o meshdynamics.o flowutil.o contractutil.o gmresutil.o dgmres.o zgmres.o
-
 OBJS = keys.o readkey.o genutil.o mt19937.o inputparams.o networkutil.o  sort2int.o meshutil.o dynsysutil.o fvmdynamics.o nodecontractutil.o flowutil.o resvutil.o
 
 FC = gfortran
@@ -7,6 +5,7 @@ FLAGS = -O3
 DEBUGFLAGS = -g -fbacktrace -ffpe-trap=zero,overflow,invalid -fcheck=all -fbounds-check
 OSGFLAGS = -static
 LIBS =  -llapack -lblas  -lgfortran -lm
+LEAKFLAGS = '-g -O0'
 
 # executable name
 EXE = ../netmeshdynamicsFVM.exe
@@ -23,10 +22,13 @@ TESTEXE = ../testrun.exe
 	$(FC) $(FLAGS) $(DEBUGFLAGS) -c $<
 
 default: $(OBJS) main.o
-	$(FC) $(FLAGS) $(DEBUGFLAGS) $(OBJS) main.o -o $(EXE) $(LIBS)
+	$(FC) $(FLAGS) $(OBJS) main.o -o $(EXE) $(LIBS)
 
 debug: $(OBJS) main.o
 	$(FC) $(FLAGS) $(DEBUGFLAGS) $(OBJS) main.o -o $(EXE) $(LIBS)
+
+leakcheck: $(OBJS) main.o
+	$(FC) $(LEAKFLAGS) $(OBJS) main.o -o $(EXE) $(LIBS)
 
 osg: $(OBJS) main.o
 	$(FC) $(FLAGS) $(OSGFLAGS) $(OBJS) main.o -o $(OSGEXE) $(LIBS) 

@@ -97,8 +97,12 @@ MODULE KEYS
   DOUBLE PRECISION :: FIXPTCENT(2),FIXPTRAD, FIXPTMAXDIST
   DOUBLE PRECISION :: FIXPTEXCENT(3), FIXPTEXRAD
 
-  ! probability of closing an edge boundary
-  DOUBLE PRECISION :: PBOUNDCLOSE
+  ! rate of closing and reopening mesh boundaries
+  DOUBLE PRECISION :: CLOSEBOUNDRATEPERLEN, OPENBOUNDRATE
+  ! if PCLOSEPERLEN is positive, then close some number of mesh boundaries
+  ! permanently
+  DOUBLE PRECISION :: PCLOSEBOUNDPERLEN
+  LOGICAL :: DOCLOSEBOUNDRATE, DOCLOSEBOUNDONCE
 
   ! Activation and depletion
   INTEGER, PARAMETER :: MAXNACT = 100

@@ -123,8 +123,14 @@ SUBROUTINE READKEY
   ! Randomly pick points in a circle and fix mesh cells nearest them
   RANDFIXPTS = .FALSE.
 
-  ! probability of closing some edge boundaries (negative = never close)
-  PBOUNDCLOSE = -1D0
+  ! By default do not close any mesh boundaries
+  ! probability of closing some edge boundaries permanently  
+  PCLOSEBOUNDPERLEN = -1D0
+  DOCLOSEBOUNDONCE = .FALSE.
+  ! rates of opening and closing edge boundaries  
+  CLOSEBOUNDRATEPERLEN = -1D0
+  OPENBOUNDRATE = -1D0
+  DOCLOSEBOUNDRATE = .FALSE.
   
   ! edges on which the field starts (overwrites nodes)
   NSTARTEDGE = 0
@@ -354,6 +360,16 @@ SUBROUTINE READKEY
            DO I = 1,MIN(MAXNFIELD,NITEMS-1)
               CALL READF(CEXT(I))
            ENDDO
+        CASE('CLOSEBOUNDONCE')
+           ! close some set of boundaries once at start of sim
+           CALL READF(PCLOSEBOUNDPERLEN)
+           IF (PCLOSEBOUNDPERLEN.GE.0) DOCLOSEBOUNDONCE = .TRUE.
+        CASE('CLOSEBOUNDRATE')
+           ! close and reopen boundaries at some rate
+           CALL READF(CLOSEBOUNDRATEPERLEN)
+           CALL READF(OPENBOUNDRATE)
+           IF (CLOSEBOUNDRATEPERLEN.GE.0.AND.OPENBOUNDRATE.GE.0) &
+                & DOCLOSEBOUNDRATE = .TRUE.
         CASE('CONCENTRATIONS3D')
            IF (NITEMS.GT.1) THEN
               CALL READO(CONCENTRATIONS3D)
@@ -500,9 +516,7 @@ SUBROUTINE READKEY
               OUTPUTTOTFLUXONLY = .TRUE.
            ELSE
               CALL READO(OUTPUTTOTFLUXONLY)
-           ENDIF
-        CASE('PBOUNDCLOSE')
-           CALL READF(PBOUNDCLOSE)
+           ENDIF        
         CASE('PERIODICGLOBALPERM')
            CALL READF(PERIODGLOBALPERM)
            CALL READF(DURGLOBALPERM)
