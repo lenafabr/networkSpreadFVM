@@ -45,7 +45,7 @@ CONTAINS
     DOUBLE PRECISION :: PSTART, U, PSTOP, U2, DV
     INTEGER :: CELLLIST(DSP%MESHP%NCELL)
     INTEGER :: SNAPSTEPLIST(NSNAPSHOT), NEXTSNAPIND
-    LOGICAL :: TAKESNAP
+    LOGICAL :: TAKESNAP, PERMON
     DOUBLE PRECISION :: LOGMAX,DLOG
 
     IF (.NOT.NETP%ARRAYSET) THEN
@@ -226,7 +226,15 @@ CONTAINS
        CURTIME = CURTIME+DELT
 
        ! if doing periodic global permeability, turn permeability off and on
-       DSP%ISPERM =  (MOD(CURTIME,DSP%PERIODGLOBALPERM).LT.DSP%DURGLOBALPERM)
+       IF (DSP%PERIODGLOBALPERM.GT.0) THEN
+          PERMON = (MOD(CURTIME,DSP%PERIODGLOBALPERM).LT.DSP%DURGLOBALPERM)
+          IF (.NOT.ANY(DSP%ISPERM).AND.PERMON) THEN
+             PRINT*, 'turn on permeability', curtime
+          ELSEIF (ANY(DSP%ISPERM).AND..NOT.PERMON) THEN
+             PRINT*, 'turn off permeability', curtime
+          ENDIF                    
+          DSP%ISPERM = PERMON
+       ENDIF
               
        IF (MINVAL(DSP%FIELDS(:,1)) < -1D0) THEN
           PRINT*, 'ERROR: NEGATIVE CONCENTRATION'
