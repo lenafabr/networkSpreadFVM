@@ -68,7 +68,7 @@ SUBROUTINE READKEY
   UNIFORMBUFFER = .FALSE.
   
   ! network parameters
-  MAXBRANCH = 10 ! max number of branches per node
+  MAXBRANCH = 12 ! max number of branches per node
 
   NSTEP = 1E6 ! Number of steps to propagate for
   DELT = 1D-4 ! time step for BD propagation
