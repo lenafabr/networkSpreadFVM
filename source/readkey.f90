@@ -94,7 +94,7 @@ SUBROUTINE READKEY
   ! Mesh on network
   MAXMESHSIZE = 0.1D0 ! maximum size of mesh interval
   MINMESHPT = 2 ! minimum interior cells per edge
-  MESHFILE = '*.mesh' ! file for output of mesh info
+  MESHFILE = '*.mesh.txt' ! file for output of mesh info
 
   ! list of absorber nodes (ie: calcium exit sites)
   ABSORBERS = 0
@@ -278,6 +278,8 @@ SUBROUTINE READKEY
   ! and pumping out of global reservoir
   GLOBALRESVKOUT = 0D0
   GLOBALRESVKMOUT = 1D0
+  ! initial concentration for global reservoir
+  GLOBALRESVSTART = 0D0
   
   ! -------------------------
   ! Read in all parameter files, starting with the ones specified on command line
@@ -496,6 +498,8 @@ SUBROUTINE READKEY
            IF (NITEMS.GT.6) THEN
               CALL READO(PERMTOGLOBALRESV)
            END IF
+        CASE('GLOBALRESERVOIRSTART')
+           CALL READF(GLOBALRESVSTART)
         CASE('KDEQUIL')
            CALL READF(KDEQUIL)
         CASE('KOFF')

@@ -1,4 +1,5 @@
-classdef MeshObj < handle
+%classdef MeshObj < handle
+classdef MeshObj < matlab.mixin.Copyable   
     % object defining a FVM mesh
 properties                               
     ncell
@@ -11,6 +12,7 @@ properties
     resvind % reservoir index
     nodeind % which node index
     edgeind % which edge index
+    rad % mesh cell radius
 end
 
 methods
@@ -51,8 +53,10 @@ methods
                     MSH.nodeind(cc) = data(cc+1,dim+deg+4);
                     MSH.edgeind(cc,:) = data(cc+1,dim+deg+(5:6));
                     MSH.resvind(cc) = data(cc+1,dim+deg+7);
-                    if (size(data,2)>dim+deg+7)
+                    if (size(data,2)>dim+deg+7) % also include mesh radii
                         MSH.rad(cc) = data(cc+1,dim+deg+8);
+                    else
+                        MSH.rad(cc) = 1/sqrt(pi);
                     end
                 else
                     % no node/edge info

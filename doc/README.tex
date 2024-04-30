@@ -159,6 +159,12 @@ By default, the simulations work with concentrations in units of $mM \times \pi 
       \item Not used
     \end{itemize}
 %
+\item {\it DOFLOW}
+\begin{itemize}
+	\item  value: 1 optional logical; default: true 
+	\item Include advective flow along edges
+\end{itemize}
+%
 \item {\it GLOBALRESERVOIR}
 \begin{itemize}
 	\item values: 5 floats, 1 logical; defaults: -, -, -, -, -, F
@@ -175,6 +181,26 @@ By default, the simulations work with concentrations in units of $mM \times \pi 
 		\item PERMTOGLOBALRES. If set to True, permeable nodes release their particles into the global reservoir rather than the extracellular environment.
 		%\item FIXNODESNOTGLOBALRES. If set to True, then any nodes with fixed concentrations are not connected to the reservoir. Flux out of these nodes is assumed to go into the extracellular environment instead of the cytoplasm. 
 	\end{itemize}
+\end{itemize}
+%
+\item {\it GLOBALRESVSTART}
+\begin{itemize}
+	\item  value: 1 float; default 0D0
+	\item Initial concentration in global reservoir (1st field only. The others are assumed to be 0)
+\end{itemize}
+%
+\item {\it MESHFILE}
+\begin{itemize}
+	\item  value: 1 string, up to 100 characters; default: *.mesh.txt
+	\item File name in which to output mesh structure.
+	\item * is replaced by the command-line suffix
+\end{itemize}
+%
+\item {\it MESHSIZE}
+\begin{itemize}
+	\item  values: 1 float, 1 optional integer; defaults: 0.1, 2
+	\item Float: limit for maximum length of an edge mesh cell
+	\item Integer: minimum number of internal mesh cells along an edge (does not include nodes). Gives smaller mesh cells when edges are short.
 \end{itemize}
 %
 \item {\it NETWORKDIM}

@@ -660,7 +660,9 @@ CONTAINS
        MESHP%SA(MESHP%NCELL) = 0D0 ! surface area for global reservoir is not defined
        MESHP%LEN(MESHP%NCELL) = 0D0 ! length for global reservoir is not well defined
        ! no spatial connections to global reservoir
-       MESHP%DEG(MESHP%NCELL) = 0        
+       MESHP%DEG(MESHP%NCELL) = 0
+    ELSE
+       MESHP%USEGLOBALRESV = .FALSE.
     ENDIF
     
     ! get appropriate length (beyond end nodes) for reservoir
