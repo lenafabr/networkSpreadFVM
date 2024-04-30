@@ -13,6 +13,7 @@ properties
     nodeind % which node index
     edgeind % which edge index
     rad % mesh cell radius
+    globalresvind
 end
 
 methods
@@ -67,6 +68,14 @@ methods
                 MSH.nodeind(cc) = 0; MSH.edgeind(cc,:) = 0;
                 MSH.resvind(cc) = 0; % no reservoir info
             end
+        end
+
+        % does this mesh include a global reservoir?
+        ind = find(MSH.nodeind==0 & MSH.edgeind(:,1)' == 0 & MSH.resvind == 0,1);
+        if (isempty(ind))
+            MSH.globalresvind = 0;
+        else
+            MSH.globalresvind = ind;
         end
     end
     

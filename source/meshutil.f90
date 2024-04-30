@@ -535,6 +535,7 @@ CONTAINS
        ENDDO
     ENDDO
 
+    IF (MESHP%USEGLOBALRESV) CT = CT+1
    
     IF (CT.NE.MESHP%NCELL) THEN
        PRINT*, 'ERROR IN SETUPMESH: wrong number of cells', MESHP%NCELL, CT
@@ -661,6 +662,8 @@ CONTAINS
        MESHP%LEN(MESHP%NCELL) = 0D0 ! length for global reservoir is not well defined
        ! no spatial connections to global reservoir
        MESHP%DEG(MESHP%NCELL) = 0
+       MESHP%POS(MESHP%NCELL,:) = 0D0
+       
     ELSE
        MESHP%USEGLOBALRESV = .FALSE.
     ENDIF
