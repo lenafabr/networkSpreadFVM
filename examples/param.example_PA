@@ -1,4 +1,4 @@
-# parameter file for watching spread of continuously photoactivated region
+# parameter file for watching spread of an initial bolus of photoactivated particles.
 # What you want the code to do. Do not change this
 ACTION rundynamics
 

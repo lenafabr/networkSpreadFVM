@@ -180,5 +180,10 @@ MODULE KEYS
 
   ! Periodic global permeability
   DOUBLE PRECISION :: PERIODGLOBALPERM, DURGLOBALPERM
+
+  ! Global reservoir that tracks cytoplasmic concentration
+  ! allows for recovery from well-mixed cytoplasm
+  DOUBLE PRECISION :: GLOBALRESVOL, GLOBALRESVKR, GLOBALRESVKMR, GLOBALRESVKOUT, GLOBALRESVKMOUT
+  LOGICAL :: USEGLOBALRESV,PERMTOGLOBALRESV
   
 END MODULE KEYS

@@ -87,5 +87,5 @@ PERMNEARNODEDIST 3D0
 # external concentration of free calcium and protein (linear, conc*pi*a^2)
 CEXT  0D0 0D0
 
-# use absolute permeability, regardless of mesh size
+# FALSE = use absolute permeability, regardless of mesh size
 USEPERMPREFACTOR FALSE

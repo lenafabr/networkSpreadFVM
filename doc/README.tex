@@ -4,19 +4,26 @@
 
 \usepackage[letterpaper, left=0.9in, right=0.9in, top=0.9in, bottom=0.9in, nofoot, footnotesep=0.15in, headsep=0.15in, footskip=0.25in, nomarginpar]{geometry}
 
+\newcommand{\comment}[1]{{\color{red} \it [#1]}}
+
 \begin{document}
 \title{\vspace{-2cm}Documentation for networkFVMsims: finite volume method implementation of evolving reaction-diffusion fields on a network}
 \author{E.~F.~Koslover}
 \date{Last updated \today}
 \maketitle
 
-The code in this package can be used to simulated dynamics of buffered calcium ions or of other particles spreading across a tubular network. In its default mode, it treats networks as point-like nodes linked by one-dimensional edges of constant radius. Some extensions are provided for inputting 3D meshes of more complicated structures (eg: sheets), but these are not yet documented. Alternately, rapidly-equilibrating `reservoirs' can be included in the networks.
+The code in this package can be used to simulate dynamics of buffered calcium ions or of other particles spreading across a tubular network. In its default mode, it treats networks as one-dimensional edges of constant radius, connected at point-like nodes. Some extensions are provided for inputting 3D meshes of more complicated structures (eg: sheets), but these are not yet documented. Alternately, rapidly-equilibrating `reservoirs' can be included in the networks.
 
-The code stores information about network structure (edge connectivity, edge lengths) in a NETWORK object. Note that while network edges can be curved (and thus longer than the node-to-node distance), the spatial embedding of the edges is not stored. The network structure is input by the user in a .net file (see networktools project on github for Matlab code to manipulate, visualize, and output network structures). The code builds its own MESH structure consisting of linked mesh elements. These can be loaded and visualized with the matlab code provided in scripts.
+The code stores information about network structure (edge connectivity, edge lengths) in a NETWORK object. Note that while network edges can be curved (and thus longer than the node-to-node distance), the spatial embedding of the edges is not stored. The network structure is input by the user in a .net file (see \verb=networktools= project on github for Matlab code to manipulate, visualize, and output network structures). The current code builds its own MESH structure consisting of linked mesh elements. These can be loaded and visualized with the matlab code provided in scripts.
 
 NOTE: this documentation is far from complete and currently only includes the most basic of the features implemented.
 %\tableofcontents
 %\newpage
+\section{Dependencies}
+\begin{itemize}
+	\item This project code: \url{https://github.com/lenafabr/networkSpreadFVM}
+	\item Network manipulation code: \url{https://github.com/lenafabr/networktools} 
+\end{itemize}
 
 \section{Compilation Instructions}
 To compile and run the program, you will need the following:
@@ -38,12 +45,12 @@ make FC=compiler
 substituting in the command you usually use to call the compiler.
 
 \noindent
-If the compilation works properly, the executable \path=treeParticleSim.exe= will appear in the main directory.
+If the compilation works properly, the executable \path=netmeshdynamicsFVM.exe= will appear in the main directory.
 
 \section{Usage Instructions}
 To run the program in the main directory, type:
 \begin{verbatim}
-./treeparticleSim.exe suffix > stdout.suffix
+./netmeshdynamicsFVM.exe suffix > stdout.suffix
 \end{verbatim}
 
 Here, \verb=suffix= can be any string up to 100 characters in length.
@@ -59,7 +66,7 @@ in Section \ref{sec:keywords}. Each keyword goes on a separate
 line. Any line that starts with "\#" is treated as a comment and
 ignored. Any blank line is also ignored. The keywords in the parameter
 file are not case sensitive. For the most part, the order in which the
-keywords are given does not matter. All parameters have default
+keywords are given does not matter. Most of the parameters have default
 values, so you need only specify keywords and values when you want to
 change something from the default.
 
@@ -69,140 +76,178 @@ change something from the default.
 
 A few example parameter files are provided
 
-The main one is \verb=examples/param.MCFO1=): 
-This will run a simulation of particles moving around on a dendritic tree. 
-Particles are produced at the soma, move anterograde until they hit a distal tip, then turn around. Switch to the alternate set of TRANSRATE lines in the parameter file to enable the particles to halt and turn around partway.
+\subsection{Ca$^{2+}$ release from a honeycomb network}
 
-To run this simulation:
+The parameters for this example run are stored in \verb=examples/param.example1_ca=). 
+Within the examples directory, run the code as:
 
 \begin{verbatim}
-../treeParticleSim.exe MCFO1
+../netmeshdynamicsFVM.exe example1_ca
 \end{verbatim}
 
-To parse the snapshots for the example and visualize the particle motion, use
+This will run a simulation of calcium ions and buffer proteins diffusing on a tubular network, with a local region that is releasing free calcium.
 
-\verb=scripts/visualizeExample.m=
+Output files:
+\begin{itemize}
+	\item \verb=example1_ca.out= contains the total flux of calcium out of the network at each time point
+	\item \verb=example1_ca.snap.txt= contains the concentration of free calcium and total buffer protein at all mesh cells, at each snapshot time
+\end{itemize}
 
-A similar simulation on a simple 2-level tree: \verb=examples/param.prodtree=
+To parse this data and generate plots, an example matlab script is provided in \verb=scripts/example1_ca.m=
 
-Another simulation with a fixed number of particles that reflect off all terminal nodes: \verb=examples/param.reftree=
+\comment{TODO: insert example output figure here}
+
+\subsection{Spreading of photoactivated particles}
+The parameters for this example run are stored in \verb=examples/param.example_PA=). 
+Within the examples directory, run the code as:
+
+\begin{verbatim}
+../netmeshdynamicsFVM.exe example_PA
+\end{verbatim}
+
+This will run a simulation of diffusive particles on a network spreading from an initial bolus of photoactivated particles.
+
+\noindent Output files:
+\begin{itemize}
+	\item \verb=example_PA.out= contains the total flux of calcium out of the network at each time point
+	\item \verb=example_PA.snap.txt= contains the concentration of free calcium and total buffer protein at all mesh cells, at each snapshot time
+\end{itemize}
+
+\noindent To parse this data and generate plots, an example matlab script is provided in \verb=scripts/example_PA.m=
+
+\comment{TODO: insert example output figure here}
+
+\subsection{Continuous photoactivation}
+\comment{TODO: make an example simulation with a continuously photoactivated region}
+
+\subsection{Ca$^{2+}$ refill}
+\comment{TODO: make an example simulation where a reservoir is refilled with calcium}
+
 
 \section{Keyword Index}
 \label{sec:keywords}
 The code will attempt to read parameters out of a file named \path=param.suffix= where ``suffix'' is the command line argument. If no command line arguments are supplied, it will look for a file named \path=param=. If multiple arguments are supplied, it will read multiple parameter files in sequence.
 
-The parameter file should have one keyword per line and must end with a blank line. All blank lines and all lines beginning with \# are ignored. For the most part, the order of the lines and the capitalization of the keywords does not matter. All keywords except {\em ACTION} are optional. The default values for each parameter are listed below. If a keyword is supplied, then values may or may not be needed as well. Again, the required and optional value types are listed below.
+The parameter file should have one keyword per line and must end with a blank line. All blank lines and all lines beginning with \# are ignored. For the most part, the order of the lines and the capitalization of the keywords does not matter. All keywords except {\em ACTION} are optional. The default values for each parameter are listed below. If a keyword is supplied, then values may or may not be needed as well. The required and optional value types are listed below.
 
 Keywords and multiple values are separated by spaces.
 
-When reading the parameter file, lines longer than 500 characters will be truncated. To continue onto the next line, add ``+++'' at the end of the line to be continued.
+When reading the parameter file, lines longer than 500 characters will be truncated. To avoid this and continue onto the next line, add ``+++'' at the end of the line to be continued.
 No individual keyword or  value should be longer than 100 characters.
 
 Floating point numbers can be formated as $1.0$, $1.1D0$, $10e-1$, $-1.0E+01$, etc., where the exponential notation specifier must be D or E (case insensitive). Integer numbers can also be specified in exponential notation without decimal points (eg: 1000 or 1E3). Logical values can be specified as T, F, TRUE, FALSE, 1, or 0 (with 1 corresponding to true and 0 to false).
 
 \subsection*{List of Keyword inputs}
 
-Some of the below keywords are not actually used in this skeleton code, but are saved for later.
+\comment{This is currently a very incomplete list. Some lucky student is going to get the task of filling in all the implemented keywords eventually.} In the meantime, look in \verb=source/readkey.f90= for comments and default values of most of the keyword parameters. The variables set by keywords are declared in \verb=source/keys.f90=
+
+By default, the simulations work with concentrations in units of $mM \times \pi a^2$ where $a$ is the tubule radius, length units of $\mu$m, and time units of seconds.
 
 \begin{itemize}
 %
-\item {\it ABSORBTERM}
-\begin{itemize}
-	\item value: 1 integer, then several logical values; default: false
-	\item 1st num = particle type, then flag for whether each state disappears when hitting a terminal node
-\end{itemize}
-%
 \item {\it ACTION}
   \begin{itemize}
-    \item  value: 1 string of at most 20 characters; no default
+    \item  value: 1 string of at most 20 characters; default NONE
     \item This keyword sets the overall calculation performed by the program 
-    \item Possible values are: RUNSIM
+    \item Possible values are: RUNDYNAMICS (the only one currently implemented)
   \end{itemize}
 %
 \item {\it DELT}
     \begin{itemize}
       \item  value: 1 float; default 1D-4
-      \item Time-step for dynamics. 
+      \item Time-step for forward Euler stepping in the dynamics. 
       \item Not used
     \end{itemize}
 %
-\item {\it DIRECTEDTREE}
+\item {\it GLOBALRESERVOIR}
 \begin{itemize}
-	\item 1 logical or nothing; default false
-	\item If no value provided, flip to true
-	\item Set up network as a directed tree, placing parent edge first in NODEEDGES and then ordering by edge ID
-	\item Will raise error if edges are not properly directed
+	\item values: 5 floats, 1 logical; defaults: -, -, -, -, -, F
+	\item Include a special `global reservoir' that interacts with all (or most) of the mesh cells. By default, there is no such reservoir.
+	\item This reservoir gets its own concentration fields (stored as part of the mesh structure)
+	\item Interchange between the global reservoir and the mesh cells is in terms of Michaelis-Menten kinetics and is not based on transport coefficients (ie: unrelated to diffusion or flow across boundaries). Assume only the first field interacts with the global reservoir
+	\item The values supplied (in order) are:
+	\begin{itemize}
+		\item Volume $V_g$. If working with 1D concentrations, instead supply $V_g^{(1D)}/(pi a^2)$ where $a$ is the tubule radius.
+		\item Recovery rate constant $k_r$ in units of per area per time. If working with 1D concentrations, instead supply $k_r^{(1D)} (2\pi a)$
+		\item $K_{Mr}$ = saturation concentration for recovery. 
+		\item Rate constant $k_\text{out}$ for pumping out of the global reservoir. Units of time$^{-1}$.
+		\item $K_{M,\text{out}}$ = saturation concentration for pumping out.
+		\item PERMTOGLOBALRES. If set to True, permeable nodes release their particles into the global reservoir rather than the extracellular environment.
+		%\item FIXNODESNOTGLOBALRES. If set to True, then any nodes with fixed concentrations are not connected to the reservoir. Flux out of these nodes is assumed to go into the extracellular environment instead of the cytoplasm. 
+	\end{itemize}
 \end{itemize}
 %
-\item {\it INITEDGES}
-\begin{itemize}
-	\item value: 1 or more integers; default = -1
-	\item List of edges such that particles start uniformly distributed over those edges
-	\item If first number is negative, start particles uniformly over all edges in the network
-\end{itemize}
-%
-\item {\it INITSTATE}
-\begin{itemize}
-	\item value: integer, then 1 or more floats; default: 1 1D0
-	\item Distribution of starting states
-	\item first value: particle type
-	\item float values: probability of starting in each state
-\end{itemize}
 \item {\it NETWORKDIM}
 	\begin{itemize}
-		\item  value: 1 integer; default: 3
+		\item  value: 1 integer; default: 0
 		\item Dimensionality of space in which network is embedded
+		\item If positive value: explicitly defines the spatial dimension in which the network is embedded
+		\item If 0, use the .net file ($\text{\# items in a NODE row} - 2$) to set the dimension
 	\end{itemize}
 %
 \item {\it NETFILE}
 \begin{itemize}
 	\item  value: 1 string; default: *.net
-	\item Input network file (full format with NODE lines, etc) used to start the simulation
+	\item Input network file used to start the simulation
 	 \item Any * in the file name will be replaced by the command-line argument (suffix)
-\end{itemize}
-%
-\item {\it NPARTINIT}
-\begin{itemize}
-	\item  value: 1 integer; default: 1
-	\item Number of initial particles to place in the system
 \end{itemize}
 %
 \item {\it OUTFILE}
     \begin{itemize}
-      \item  value: 1 string, up to 100 characters; default: *.out
-      \item Output file for {\color{red} something} (not sure what yet)
+      \item  value: 1 string (up to 100 characters) and 1 optional integer
+      \item  default: *.out 1000
+      \item String: output file for the flux of released calcium over time      
       \item Any * in the file name will be replaced by the command-line argument (suffix)
-      \item Not used
+      \item The integer $N$ indicates the flux will be written to the file every $N$ timesteps of the simulation. This can also be set separately with keyword OUTPUTEVERY
       \end{itemize}
 %
 \item {\it PRINTEVERY}
 \begin{itemize}
 	\item  value: 1 integer; default: 1
-	\item Print to screen every so many steps
+	\item Print simulation progress to screen every so many steps
 \end{itemize}
 %
-\item {\it PRODUCTION}
+\item {\it PERMNODE}
 \begin{itemize}
-	\item  value: 2 integers, float, 1 or more integers; default: 1 1 0D0 1
-	\item Control production of new particles at nodes
-	\item First number: particle type, second number: state that new particles are produced in
-	\item 3rd number: production rate
-	\item remaining number: list of nodes where particles are produced
+	\item  value: 1 integer $n$, 1 or more floats $p$; defaults: -- 0
+	\item Make a specific node permeable to one or more of the concentration fields. By default, there are no permeable nodes.	
+	\item $n$ is the node index. $p$ is the permeability or permeability prefactor, scaled as described below, for each of the fields.
+	\item If $P$ is the membrane permeability in units of length/time, the current out of each mesh cell is $I = AP (c_i - c_\text{ext}) = \frac{AP}{\pi a^2} (\rho_i - \rho_\text{ext})$ where $c_i$ are 3D concentrations and $\rho_i$ are 1D concentrations. $A_i$ is the mesh cell surface area.
+	\item If working with 1D concentrations (the default) then:
+	\begin{itemize}
+	\item If PERMPREFACTOR is true, then $p = 2P/(aD)$ where $D$ is the particle diffusivity, $a$ is the tubule radius. The current is $I = [p (\frac{A}{2\pi a}) D](\rho_i - \rho_\text{ext})$ 
+	\item If PERMPREFACTOR is false, then $p = A P/(\pi a^2)$ where $A$ is the area of a mesh cell (in units of length$^2$, assumed the same for all mesh cells). The current is $p(\rho_i - \rho_\text{ext})$
+	\end{itemize}
+	\item If working with 3D concentrations then:
+	\begin{itemize}
+		\item If PERMPREFACTOR is true, then $p = P/D$. The current is $I = [p A D](c_i - c_\text{ext})$ 
+		\item If PERMPREFACTOR is false, then $p = A P$. The current is $I = [p](c_i - c_\text{ext})$  .		
+	\end{itemize}
+	
+\end{itemize}
+
+\item {\it PERMPREFACTOR}
+\begin{itemize}
+	\item  value: 1 optional logical
+	\item If this is true, then the permeability value set by PERMNODE is treated as a prefactor, to be scaled by $A\cdot D$ when incorporated into simulations
+	\item If keyword is not supplied, it is set to F 
+	\item If keyword is supplied but there is no value, it is set to T
+	\item {\color{red} Strongly recommended: set this to true} (larger mesh elements should have higher permeability)
 \end{itemize}
 %
-\item {\it READEDGEVALS}
-\begin{itemize}
-	\item values: nothing or 1 logical; default=false
-	\item if no value provided, switch to true
-	\item Read in one additional floating point value for each edge from network file
-\end{itemize}
-%
-\item {\it READNODEVALS}
-\begin{itemize}
-	\item values: nothing or 1 logical; default=false
-	\item if no value provided, switch to true
-	\item Read in one additional floating point value for each node from network file
-\end{itemize}
+%\item {\it RECOVERY}
+%\begin{itemize}
+%	\item values: 1 float
+%	\item Implement global recovery of particles previously released into the cytoplasm. The current implementation assumes both the recovery pumping rate and the rate of pumping out of the cell are linear with the cytoplasmic calcium concentration. \comment{Eventually should implement saturation to a max rate, but will need to explicitly keep track of cytoplasmic calcium over time}
+%	\item In order, the values are: 
+%	\begin{itemize} 
+%		\item RECOVERFROM: initial release just before time 0, expressed as a drop in global network free calcium (or single particle) concentration. For default 1D sims, this is given in units of $\text{mM}*\pi r^2$ where $r$ is the tube radius.
+%		\item KREC: rate constant for recovery (per ER membrane area). 
+%		Suppose $\hat{k}_\text{rec}$ is the rate constant per ER membrane area for pumping from the cytoplasm back into the ER (in units of $\text{s}^{-1} \text{mM}^{-1} \mu\text{m}^{-2}$), so that the current being pumped in is $I = \hat{k}_\text{rec} c_\text{cyto}$. For 1D sims, the value for KREC (in units of $\text{s}^-1 \mu\text{m}^{-1} $) should be input as $\text{KREC} = \hat{k}_\text{rec} (2\pi r)/V_\text{cyto}$	
+%		\item KOUT: rate constant for pumping cytoplasmic calcium out of the cell. 
+%		Suppose $\hat{k}_\text{out}$ is the rate constant for pumping from the cytoplasm out of the cell (in units of $\text{s}^{-1} \text{mM}^{-1}$). The value of KOUT (in units of $\text{s}^-1$) should be input as $\text{KREC} = \hat{k}_\text{out}/V_\text{cyto}$		
+%	\end{itemize}	
+%\end{itemize}
 %
 \item {\it RNGSEED}
   \begin{itemize}
@@ -210,20 +255,14 @@ Some of the below keywords are not actually used in this skeleton code, but are 
     \item seed for random number generator
     \item value of 0 will seed with system time in milliseconds
     \item value of -1 will use the last 5 characters in the suffix
-    \item value of -2 will use the last 4 charactes in the suffix and the millisecond time
-    \item other positive value: the seed is used directly for repeatable simulations (should be positive)
+    \item value of -2 will use the last 4 charactes in the suffix and the millisecond time. This is useful when launching many iterations nearly simultaneously on a cluster.
+    \item Other values: the seed is used directly for repeatable simulations. 
   \end{itemize}
-%
-\item {\it RUNSPEED}
-\begin{itemize}
-	\item  value: 1 or more floats; default 0D0
-	\item Not used
-\end{itemize}
 %
 \item {\it SNAPSHOTFILE}
     \begin{itemize}
       \item  value: 1 string; default: *.snap.out
-      \item File for dumping out snapshots. Can also be specified within SNAPSHOTS keyword.
+      \item File for dumping out snapshots (concentration fields on all mesh elements). Can also be specified within SNAPSHOTS keyword.
     \end{itemize}
 %
 \item {\it SNAPSHOTS}
@@ -231,42 +270,13 @@ Some of the below keywords are not actually used in this skeleton code, but are 
 	\item 1 optional integer, 1 optional string, 1 optional logical; defaults: 1, *.snap.out, false
 	\item Dump snapshots over the course of the calculation
 	\item integer: how often to dump snapshots; string: snapshot file (* is replaced with suffix); logical: append rather than rewriting the snapshot file
-	\item Snapshot file contains multiple snapshots of network structure and other info. Should be read with \verb=parseDynNetworkSnapshots.m= script
+	\item Snapshot file contains multiple snapshots of concentration profiles on all the mesh elements. Should be read with \verb=loadSnapshotFVM.m= script
 \end{itemize}
 %
-\item {\it SPLITTYPE}
-\begin{itemize}
-	\item value: 2 integer, string of up to 30 characters
-	\item Default: \verb=EQUAL_OTHER=
-	\item numbers are particle type, state. Then a string describing how to split among branches when passing a junction, for each state
-	\item Allowed values: 
-	\begin{itemize}
-		\item \verb=EQUAL_OTHER=: equally likely to step on all edges other than the one it starts on
-		\item \verb=DOWNSTREAM_EDGEVALS=: when moving downstream, split among daughter edges in proportion to edgevals. DIRECTEDTREE must be set
-		\item \verb=UPSTREAM_EDGEVALS=: when moving upstream, go into trunk. DIRECTEDTREE must be set
-	\end{itemize}
-\end{itemize}
-
-\item {\it TRANSRATES}
-\begin{itemize}
-	\item value: 2 integers, then several positive floats; default: 0
-	\item 1st num = particle type, 2nd num = output state, floats = rates of transitioning from all other states to this output state
-\end{itemize}
-\item {\it TRANSTERM}
-\begin{itemize}
-	\item value: 2 integers, then several positive floats; default: 0
-	\item 1st num = particle type, 2nd num = output state, floats = probability of switching from all other states into this output state when hitting a dead end node
-\end{itemize}
-%
-\item {\it VELOCITY}
-\begin{itemize}
-	\item  value: integer, then (nstate) floats; default: 0D0
-	\item For a given type of particle (first number), list the velocity in each state
-\end{itemize}
 \item {\it VERBOSE}
         \begin{itemize}
-          \item  value: 1 logical; default: false
-          \item Print extra output. Not currently implemented
+          \item  value: 1 optional logical; default if not present: false; default if value unspecified: true
+          \item Print extra output. Not really implemented in a useful way right now.
         \end{itemize}
 % --------------------------
 

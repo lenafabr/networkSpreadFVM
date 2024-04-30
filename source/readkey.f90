@@ -264,6 +264,20 @@ SUBROUTINE READKEY
 
   ! concentrations are expressed as 3D rather than 1D quantities
   CONCENTRATIONS3D = .FALSE.
+
+  ! global reservoir (ie: cytoplasm) with pumping kinetics
+  USEGLOBALRESV = .FALSE.
+  ! Permeable cells release to global reservoir?
+  PERMTOGLOBALRESV = .FALSE.
+  ! volume of global reservoir (scaled by pi*a^2 if working with 1D concs)
+  GLOBALRESVOL = 1D0
+  ! rate constants and saturation concentrations for
+  ! recovery from global reservoir
+  GLOBALRESVKR = 1D0
+  GLOBALRESVKMR = 1D0
+  ! and pumping out of global reservoir
+  GLOBALRESVKOUT = 0D0
+  GLOBALRESVKMOUT = 1D0
   
   ! -------------------------
   ! Read in all parameter files, starting with the ones specified on command line
@@ -468,6 +482,20 @@ SUBROUTINE READKEY
            ! the nodes labeled FN to actually get fixed
            FIXNODEFROMNETFILE = .TRUE.
            CALL READI(FIXSUBSETNODES)
+        CASE('GLOBALRESERVOIR')
+           ! recovery of particles from global reservoir
+           USEGLOBALRESV = .TRUE.
+           ! volume and kinetic parameters for pumping from global reservoir
+           CALL READF(GLOBALRESVOL)
+           CALL READF(GLOBALRESVKR)
+           CALL READF(GLOBALRESVKMR)
+           IF (NITEMS.GT.4) THEN
+              CALL READF(GLOBALRESVKOUT)
+              CALL READF(GLOBALRESVKMOUT)
+           ENDIF
+           IF (NITEMS.GT.6) THEN
+              CALL READO(PERMTOGLOBALRESV)
+           END IF
         CASE('KDEQUIL')
            CALL READF(KDEQUIL)
         CASE('KOFF')

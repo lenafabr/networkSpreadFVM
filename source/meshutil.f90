@@ -50,6 +50,7 @@ MODULE MESHUTIL
      ! celltype = 0 for a cell cell corresponding to a network node
      ! celltype = 1 for a cell lying along a network edge
      ! celltype = 2 for a cell corresponding to a reservoir
+     ! celltype = 3 for a `global reservoir' with pumping kinetics
      INTEGER, POINTER :: CELLTYPE(:)
      ! index of node or edge on which the cell is located
      ! EDGEIND(:,1) gives which edge, EDGEIND(:,2) gives which cell along the edge
@@ -59,6 +60,11 @@ MODULE MESHUTIL
      INTEGER, POINTER :: BOUNDEDGE(:,:)
      ! for cells with a reflective boundary, what terminal node does it correspond to?
      INTEGER, POINTER :: TERMNODE(:,:)
+
+     ! dealing with global reservoir with pumping kinetics
+     LOGICAL :: USEGLOBALRESV
+     ! what index mesh cell corresponds to the global reservoir?
+     INTEGER :: GLOBALRESVIND
      
      ! have arrays been allocated?
      LOGICAL :: ARRAYSET = .FALSE.
@@ -224,7 +230,7 @@ CONTAINS
     PRINT*, 'Closed N boundaries out of total:', NCLOSE, NTOT/2, PTRY, PCLOSE
   END SUBROUTINE CLOSEBOUNDSOLD
   
-  SUBROUTINE SETUPNETWORKMESH(MESHP,NETP,MAXCELLLEN,MINNCELL,CONC3D,RESVP)
+  SUBROUTINE SETUPNETWORKMESH(MESHP,NETP,MAXCELLLEN,MINNCELL,CONC3D,USEGLOBALRESV,GLOBALRESVOL,RESVP)
     IMPLICIT NONE
     ! using a network object, set up a mesh on it for FVM simulations
     ! * CELL-CENTERED mesh. Same distance from cell position to each boundary *
@@ -236,6 +242,7 @@ CONTAINS
     ! Does NOT set diffusivity or velocities on the mesh
     ! Network object must be fully set up already
     ! CONC3D: work with 3D concentrations? default is 1D
+    ! USEGLOBALRESV: include an extra mesh cell for a global reservoir
     ! OPTIONAL: RESVP input is a pointer to a reservoirs object desribing interconnected
     ! reservoir elements to be included in the mesh
     
@@ -244,7 +251,8 @@ CONTAINS
     TYPE(RESERVOIRS), POINTER, OPTIONAL :: RESVP
     DOUBLE PRECISION, INTENT(IN) :: MAXCELLLEN
     INTEGER, INTENT(IN) :: MINNCELL
-    logical, INTENT(IN) :: CONC3D
+    logical, INTENT(IN) :: CONC3D, USEGLOBALRESV
+    DOUBLE PRECISION, INTENT(IN) :: GLOBALRESVOL
     
     INTEGER :: EC, NC, CC, CT, N1, N2, D1, D2, BC, RC, bct, CCT
     INTEGER :: NCELL
@@ -364,9 +372,11 @@ CONTAINS
        NCELLTOT = SUM(NETP%EDGENCELL) + NINTNODES + NETP%NRESV
        MAXDEG = MAX(MAXVAL(NETP%NODEDEG),MAXVAL(NETP%RESVNNODE))
     ENDIF
-    
-    CALL ALLOCATEMESH(MESHP,NCELLTOT,DIM,MAXDEG)
 
+    IF (USEGLOBALRESV) NCELLTOT = NCELLTOT+1
+    
+    CALL ALLOCATEMESH(MESHP,NCELLTOT,DIM,MAXDEG)   
+    
     ! Allocate network arrays mapping to cells
     NETP%MAXCELLEDGE = MAXVAL(NETP%EDGENCELL)
     ALLOCATE(NETP%EDGECELLS(NETP%NEDGE,NETP%MAXCELLEDGE))
@@ -640,6 +650,19 @@ CONTAINS
        ENDIF
     ENDDO
 
+    ! set up global reservoir
+    IF (USEGLOBALRESV) THEN
+       MESHP%USEGLOBALRESV = .TRUE.
+       ! set the last cell to be the global reservoir
+       MESHP%GLOBALRESVIND = MESHP%NCELL
+       MESHP%CELLTYPE(MESHP%NCELL) = 3
+       MESHP%VOL(MESHP%NCELL) = GLOBALRESVOL ! volume
+       MESHP%SA(MESHP%NCELL) = 0D0 ! surface area for global reservoir is not defined
+       MESHP%LEN(MESHP%NCELL) = 0D0 ! length for global reservoir is not well defined
+       ! no spatial connections to global reservoir
+       MESHP%DEG(MESHP%NCELL) = 0        
+    ENDIF
+    
     ! get appropriate length (beyond end nodes) for reservoir
     ! for reservoir cell, length = avg cell lngth on all attached edges
     ! NOTE: this length is not the cell volume, but rather a length
@@ -664,7 +687,7 @@ CONTAINS
 
     ! check that length is defined for all cells
     DO CC = 1,MESHP%NCELL
-       IF (MESHP%LEN(CC).LE.0D0) THEN
+       IF (MESHP%CELLTYPE(CC).NE.3.AND.MESHP%LEN(CC).LE.0D0) THEN
           PRINT*, 'ERROR: negative length found.', CC, MESHP%CELLTYPE(CC)
           STOP 1
        ENDIF
@@ -685,14 +708,15 @@ CONTAINS
              MESHP%LENPM(CT,CC) = MESHP%LEN(CT)/MESHP%DEG(CT) + MESHP%LEN(BC)/MESHP%DEG(BC)
           ENDIF
        ENDDO
-    ENDDO
+    ENDDO    
 
+    
     IF (PRESENT(RESVP)) THEN
        ! Update explicit reservoir elements
        ! this will assume the first NRESV mesh cells are reservoirs
        CALL RESERVOIRSTOMESH(RESVP,MESHP,NETP)
     ENDIF
-
+    
     ! default mesh cell radius
     !MESHP%RAD = SQRT(1D0/PI)
 

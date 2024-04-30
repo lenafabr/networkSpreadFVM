@@ -481,6 +481,11 @@ CONTAINS
     INTEGER :: CC, DEG, FC, BC, BCt
     DOUBLE PRECISION :: WSHIFT(DSP%NFIELD), WAVG(DSP%NFIELD), FLUXADV(DSP%NFIELD)
     DOUBLE PRECISION :: DFREE
+
+    IF (DSP%MESHP%USEGLOBALRESV) THEN
+       PRINT*, 'ERROR: non-equilibrated euler steps with global reservoir are not currently implemented.'
+       STOP 1
+    ENDIF
     
     FLUX = 0D0
     DFDT = 0D0
@@ -598,23 +603,32 @@ CONTAINS
     DOUBLE PRECISION, INTENT(OUT) :: DFDT(:,:)
     DOUBLE PRECISION, INTENT(OUT) :: FLUX(:,:)
     DOUBLE PRECISION :: FLUXDIFF(DSP%NFIELD)
+    DOUBLE PRECISION :: FLUXPUMP(DSP%NFIELD), TOTFLUXPUMP
     TYPE(MESH), POINTER :: MESHP
     INTEGER :: CC, DEG, FC, BC, BCt
     DOUBLE PRECISION :: WSHIFT(DSP%NFIELD), WAVG(DSP%NFIELD), FLUXADV(DSP%NFIELD)
     DOUBLE PRECISION :: DFREE
     DOUBLE PRECISION :: BFIELD(DSP%MESHP%NCELL), CFIELD(DSP%MESHP%NCELL), LKD
     DOUBLE PRECISION :: DR, DSCL, A1, A2, ABOUND,tmp
+    DOUBLE PRECISION :: GLOBALRESVFIELD(DSP%NFIELD), TOTPERMFLUX
+
     
     IF (DSP%NFIELD.NE.2.or.DSP%BUFFERTYPE.NE.2.OR.DSP%DOACTIVATION) THEN
        PRINT*, 'ERROR: EULERSTEPEQUIL only works with 2 fields and Buffer Type 2. No activation'
        STOP 1
     ENDIF
-    
-    
+
+    FLUXPUMP = 0D0    
     FLUX = 0D0
     DFDT = 0D0
 
     MESHP=>DSP%MESHP
+    
+    IF (MESHP%USEGLOBALRESV) THEN
+       ! initial field value in global reservoir
+       GLOBALRESVFIELD = 0D0
+       GLOBALRESVFIELD(1) = DSP%FIELDS(MESHP%GLOBALRESVIND,1)
+    END IF
     
     ! get field of bound ligand
     BFIELD = DSP%FIELDS(:,1)*DSP%FIELDS(:,2)/(DSP%FIELDS(:,1)+DSP%KDEQUIL)
@@ -629,7 +643,7 @@ CONTAINS
        !    PRINT*, CC, MESHP%CELLTYPE(CC), MESHP%NODEIND(CC), MESHP%EDGEIND(CC,1), MESHP%RESVIND(CC)
        !    PRINT*, DSP%FIELDS(CC,:)
        !    STOP 1
-       ! ENDIF
+       ! ENDIF       
        
        ! diffusive flux (of total ligand and total protein)
        FLUXDIFF = 0D0; 
@@ -752,7 +766,13 @@ CONTAINS
           ENDDO
        ENDIF
 
-       DFDT(CC,:) = (FLUXDIFF+FLUXADV)/MESHP%VOL(CC)
+       ! Flux into this mesh cell due to pumping from the global reservoir
+       IF (MESHP%USEGLOBALRESV.and.MESHP%CELLTYPE(CC).NE.3) THEN
+          FLUXPUMP(1) = MESHP%SA(CC)*DSP%GLOBALRESVKR*GLOBALRESVFIELD(1)/(GLOBALRESVFIELD(1)+DSP%GLOBALRESVKMR)
+          TOTFLUXPUMP = TOTFLUXPUMP + FLUXPUMP(1)
+       END IF
+       
+       DFDT(CC,:) = (FLUXDIFF+FLUXADV+FLUXPUMP)/MESHP%VOL(CC)
        ! DO FC = 1,DSP%NFIELD
        !    IF (.NOT.DSP%MOBILEFIELD(FC)) THEN
        !       ! field not allowed to move
@@ -768,7 +788,12 @@ CONTAINS
           ! connection with external concentrations at permeable node                    
           ! can have different permeability for each field
           ! save flux to external environment only
-          FLUX(CC,:) = -DSP%PERM(CC,:)*(DSP%CEXT - DSP%FIELDS(CC,:))
+          IF (MESHP%USEGLOBALRESV.AND.DSP%PERMTOGLOBALRESV) THEN
+             ! permeability flux depends on concentration in global reservoir
+             FLUX(CC,:) = -DSP%PERM(CC,:)*(GLOBALRESVFIELD - DSP%FIELDS(CC,:))
+          ELSE
+             FLUX(CC,:) = -DSP%PERM(CC,:)*(DSP%CEXT - DSP%FIELDS(CC,:))
+          ENDIF
           DFDT(CC,:) = DFDT(CC,:) - FLUX(CC,:)/MESHP%VOL(CC)
        ENDIF
                      
@@ -782,6 +807,18 @@ CONTAINS
                & (1 + DSP%FIELDS(CC,2)*DSP%KDEQUIL/LKD**2)
        ENDIF
     ENDDO
+
+    IF (MESHP%USEGLOBALRESV) THEN             
+       CC = MESHP%GLOBALRESVIND
+       DFDT(CC,1) = -(TOTFLUXPUMP &
+            & + DSP%GLOBALRESVKOUT*GLOBALRESVFIELD(1)/(GLOBALRESVFIELD(1)+DSP%GLOBALRESVKMOUT) &
+            & )/MESHP%VOL(CC)
+       IF (DSP%PERMTOGLOBALRESV) THEN
+          ! total flux out of permeable nodes   
+          TOTPERMFLUX = SUM(pack(FLUX(:,1),DSP%ISPERM))
+          DFDT(CC,1) = DFDT(CC,1) + TOTPERMFLUX/MESHP%VOL(CC)
+       ENDIF
+    END IF
 
     ! no change in fixed cells
     DO FC = 1,DSP%NFIELD
