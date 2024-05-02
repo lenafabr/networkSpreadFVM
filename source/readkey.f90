@@ -280,6 +280,9 @@ SUBROUTINE READKEY
   GLOBALRESVKMOUT = 1D0
   ! initial concentration for global reservoir
   GLOBALRESVSTART = 0D0
+
+  ! track changes in total calcium directly
+  TRACKDCDT = .FALSE.
   
   ! -------------------------
   ! Read in all parameter files, starting with the ones specified on command line
@@ -742,6 +745,8 @@ SUBROUTINE READKEY
            ELSE
               SWITCHVELS = .TRUE.
            ENDIF
+        CASE('TRACKDCDT')           
+           CALL READO(TRACKDCDT)
         CASE('TRACKFLUXPERM')
            IF (NITEMS.GT.1) THEN
               CALL READO(TRACKFLUXPERM)

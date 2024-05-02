@@ -54,7 +54,7 @@ CONTAINS
     INTEGER :: SNAPSTEPLIST(NSNAPSHOT), NEXTSNAPIND
     LOGICAL :: TAKESNAP, PERMON
     DOUBLE PRECISION :: LOGMAX,DLOG
-    DOUBLE PRECISION :: CFIELD(DSP%MESHP%NCELL)
+    DOUBLE PRECISION :: CFIELD(DSP%MESHP%NCELL), BFIELD(DSP%MESHP%NCELL)
 
     IF (.NOT.NETP%ARRAYSET) THEN
        PRINT*, 'ERROR IN RUNDYNAMICS: network not set up'
@@ -204,8 +204,8 @@ CONTAINS
        ! ---------------
 
        IF (DSP%BUFFERTYPE.EQ.2) THEN! rapid equilibration
-!          VERBOSE = STEP.GT.80D3
-          CALL EULERSTEPEQUIL(DSP,DELT,DFDT,FLUX)
+          !          VERBOSE = STEP.GT.80D3
+          CALL EULERSTEPEQUIL(DSP,DELT,DFDT,FLUX)          
        ELSE
           CALL EULERSTEP(DSP,DELT,DFDT,FLUX)
        ENDIF
@@ -251,7 +251,21 @@ CONTAINS
        ENDIF
 
        ! propagate field
-       DSP%FIELDS = DSP%FIELDS + DFDT*DELT
+        IF (DSP%TRACKDCDT) THEN       
+        ! propagate total ligand directly
+           CFIELD = DSP%FIELDS(:,1)*(1 + DSP%FIELDS(:,2)/(DSP%FIELDS(:,1)+DSP%KDEQUIL))
+          ! PRINT*, 'TESTX1:', SUM(DFDT(:,1)*MESHP%VOL), SUM(CFIELD*MESHP%VOL)
+           CFIELD = CFIELD+DFDT(:,1)*DELT
+           DSP%FIELDS(:,2) = DSP%FIELDS(:,2)+DFDT(:,2)*DELT
+           
+           BFIELD = DSP%KDEQUIL+DSP%FIELDS(:,2) - CFIELD           
+           DSP%FIELDS(:,1) = (-BFIELD + SQRT(BFIELD**2 + 4*CFIELD*DSP%KDEQUIL))/2
+        ELSE
+           ! propagate free ligand, assumes dfdt is already
+           ! the converted derivative for the free ligand
+           DSP%FIELDS = DSP%FIELDS + DFDT*DELT
+        ENDIF
+        
        CURTIME = CURTIME+DELT
 
        ! if doing periodic global permeability, turn permeability off and on
@@ -295,6 +309,8 @@ CONTAINS
           ENDIF
        END IF
 
+  !     print*, 'TESTX1', STEP, DSP%FIELDS(1,2), SUM(DSP%FIELDS(:,2)*DSP%MESHP%VOL)
+       
        IF (MOD(STEP,PRINTEVERY).EQ.0) THEN
 
           CFIELD = DSP%FIELDS(:,1)*(1+DSP%FIELDS(:,2)/(DSP%FIELDS(:,1)+DSP%KDEQUIL))
@@ -804,15 +820,17 @@ CONTAINS
           ENDIF
           DFDT(CC,:) = DFDT(CC,:) - FLUX(CC,:)/MESHP%VOL(CC)
        ENDIF
-
-       ! get change in free ligand from delta total lig and delta total prot
-       LKD = DSP%FIELDS(CC,1) + DSP%KDEQUIL;
-       IF (DSP%UNIFORMBUFFER) THEN ! spatially constant buffer
-          DFDT(CC,1) = DFDT(CC,1)/ &            
-               & (1 + DSP%FIELDS(CC,2)*DSP%KDEQUIL/LKD**2)
-       ELSE
-          DFDT(CC,1) = (DFDT(CC,1) - DSP%FIELDS(CC,1)*DFDT(CC,2)/LKD)/ &            
-               & (1 + DSP%FIELDS(CC,2)*DSP%KDEQUIL/LKD**2)
+       
+       IF (.NOT.DSP%TRACKDCDT) THEN
+          ! get change in free ligand from delta total lig and delta total prot
+          LKD = DSP%FIELDS(CC,1) + DSP%KDEQUIL;
+          IF (DSP%UNIFORMBUFFER) THEN ! spatially constant buffer
+             DFDT(CC,1) = DFDT(CC,1)/ &            
+                  & (1 + DSP%FIELDS(CC,2)*DSP%KDEQUIL/LKD**2)
+          ELSE
+             DFDT(CC,1) = (DFDT(CC,1) - DSP%FIELDS(CC,1)*DFDT(CC,2)/LKD)/ &            
+                  & (1 + DSP%FIELDS(CC,2)*DSP%KDEQUIL/LKD**2)
+          ENDIF
        ENDIF
     ENDDO
     
@@ -829,6 +847,8 @@ CONTAINS
        DFDT(CC,1) = FLUX(CC,1)/MESHP%VOL(CC)
     END IF
 
+   
+    
     ! check that total mass is not changing
     !GLOBALTEST = GLOBALTEST+SUM(FLUX(:,1))
     !PRINT*, 'TESTX1:', SUM(FLUX(:,1)), GLOBALTEST, SUM(CFIELD*DSP%MESHP%VOL)   
