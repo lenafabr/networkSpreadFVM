@@ -299,6 +299,12 @@ By default, the simulations work with concentrations in units of $mM \times \pi 
 	\item Snapshot file contains multiple snapshots of concentration profiles on all the mesh elements. Should be read with \verb=loadSnapshotFVM.m= script
 \end{itemize}
 %
+\item {\it UNIFORMBUFFER}
+\begin{itemize}
+	\item  value: 1 optional logical; default false
+	\item Assume the concentration of total buffer sites is uniform in space. This is true if there are no flows and  no leakage of buffer
+\end{itemize}
+%
 \item {\it VERBOSE}
         \begin{itemize}
           \item  value: 1 optional logical; default if not present: false; default if value unspecified: true

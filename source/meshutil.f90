@@ -285,7 +285,9 @@ CONTAINS
        IF (NETP%NODEDEG(N1).GT.1) INTNODES(EC,1) = 1
        IF (NETP%NODEDEG(N2).GT.1) INTNODES(EC,2) = 1
     ENDDO
-       
+
+    MESHP%USEGLOBALRESV = USEGLOBALRESV
+    
     ! Go through each node, and decide on the length the corresponding cell
     ! will extend along each edge
     DO NC = 1,NETP%NNODE
@@ -535,6 +537,7 @@ CONTAINS
        ENDDO
     ENDDO
 
+    PRINT*, 'TESTX1:', MESHP%USEGLOBALRESV
     IF (MESHP%USEGLOBALRESV) CT = CT+1
    
     IF (CT.NE.MESHP%NCELL) THEN
@@ -662,10 +665,7 @@ CONTAINS
        MESHP%LEN(MESHP%NCELL) = 0D0 ! length for global reservoir is not well defined
        ! no spatial connections to global reservoir
        MESHP%DEG(MESHP%NCELL) = 0
-       MESHP%POS(MESHP%NCELL,:) = 0D0
-       
-    ELSE
-       MESHP%USEGLOBALRESV = .FALSE.
+       MESHP%POS(MESHP%NCELL,:) = 0D0         
     ENDIF
     
     ! get appropriate length (beyond end nodes) for reservoir

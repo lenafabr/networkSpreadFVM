@@ -7,7 +7,9 @@ MODULE FVMDYNAMICS
   USE GENUTIL, ONLY : PI
   
   IMPLICIT NONE
-
+  ! global variable: bad coder, no biscuit. Just for use in debugging
+  DOUBLE PRECISION :: GLOBALTEST = 0D0
+  
 CONTAINS  
   SUBROUTINE RUNDYNAMICS(NETP,DSP,NSTEP,DELT,VELCONTROL,STARTRATE,STOPRATE, &
        & RUNSPEED,DOCLOSEBOUNDRATE, CLOSEBOUNDRATEPERLEN, OPENBOUNDRATE,&
@@ -52,6 +54,7 @@ CONTAINS
     INTEGER :: SNAPSTEPLIST(NSNAPSHOT), NEXTSNAPIND
     LOGICAL :: TAKESNAP, PERMON
     DOUBLE PRECISION :: LOGMAX,DLOG
+    DOUBLE PRECISION :: CFIELD(DSP%MESHP%NCELL)
 
     IF (.NOT.NETP%ARRAYSET) THEN
        PRINT*, 'ERROR IN RUNDYNAMICS: network not set up'
@@ -293,10 +296,13 @@ CONTAINS
        END IF
 
        IF (MOD(STEP,PRINTEVERY).EQ.0) THEN
-          CALL INTEGRATEFIELD(DSP,INTFIELD,TOTLEN,.true.)
-          PRINT*, 'STEP, TIME, AVG FIELDS, NFIELD, EDGECLOSED: ', &
+
+          CFIELD = DSP%FIELDS(:,1)*(1+DSP%FIELDS(:,2)/(DSP%FIELDS(:,1)+DSP%KDEQUIL))
+          CALL INTEGRATEFIELD(DSP,INTFIELD,TOTLEN,.true.)          
+          
+          PRINT*, 'STEP, TIME, AVG FIELDS, NFIELD, EDGECLOSED, TOTAVG: ', &
                & STEP, CURTIME, INTFIELD/TOTLEN, NFIELD,&
-               & DBLE(COUNT(EDGECLOSED))/NETP%NEDGE
+               & DBLE(COUNT(EDGECLOSED))/NETP%NEDGE, SUM(CFIELD*MESHP%VOL)
        ENDIF
     ENDDO
 
@@ -711,7 +717,7 @@ CONTAINS
 
                 FLUXDIFF(1) = FLUXDIFF(1) &
                      & + DSP%DCOEFF(1)*(DSP%FIELDS(BC,1) - DSP%FIELDS(CC,1))/MESHP%LENPM(CC,BCt) &
-                     & + DSP%DCOEFF(2)*(BFIELD(BC) - BFIELD(CC))/MESHP%LENPM(CC,BCt)                
+                     & + DSP%DCOEFF(2)*(BFIELD(BC) - BFIELD(CC))/MESHP%LENPM(CC,BCt)               
                 IF (.NOT.DSP%UNIFORMBUFFER) THEN  ! spatially varying buffer conc
                    ! get diffusive flux of  total protein 
                    FLUXDIFF(2) = FLUXDIFF(2) + DSP%DCOEFF(2)*(DSP%FIELDS(BC,2) - DSP%FIELDS(CC,2))/MESHP%LENPM(CC,BCt)
@@ -774,6 +780,7 @@ CONTAINS
        END IF
        
        DFDT(CC,:) = (FLUXDIFF+FLUXADV+FLUXPUMP)/MESHP%VOL(CC)
+     
        ! DO FC = 1,DSP%NFIELD
        !    IF (.NOT.DSP%MOBILEFIELD(FC)) THEN
        !       ! field not allowed to move
@@ -797,7 +804,7 @@ CONTAINS
           ENDIF
           DFDT(CC,:) = DFDT(CC,:) - FLUX(CC,:)/MESHP%VOL(CC)
        ENDIF
-                     
+
        ! get change in free ligand from delta total lig and delta total prot
        LKD = DSP%FIELDS(CC,1) + DSP%KDEQUIL;
        IF (DSP%UNIFORMBUFFER) THEN ! spatially constant buffer
@@ -808,21 +815,25 @@ CONTAINS
                & (1 + DSP%FIELDS(CC,2)*DSP%KDEQUIL/LKD**2)
        ENDIF
     ENDDO
-
-!    PRINT*, 'TESTX1:', GLOBALRESVFIELD(1), TOTFLUXPUMP, TOTFLUXPUMP/MESHP%VOL(MESHP%GLOBALRESVIND)
     
     IF (MESHP%USEGLOBALRESV) THEN             
        CC = MESHP%GLOBALRESVIND
-       DFDT(CC,1) = -(TOTFLUXPUMP &
+       FLUX(CC,1) = -(TOTFLUXPUMP &
             & + DSP%GLOBALRESVKOUT*GLOBALRESVFIELD(1)/(GLOBALRESVFIELD(1)+DSP%GLOBALRESVKMOUT) &
-            & )/MESHP%VOL(CC)
+            & )
        IF (DSP%PERMTOGLOBALRESV) THEN
           ! total flux out of permeable nodes   
           TOTPERMFLUX = SUM(pack(FLUX(:,1),DSP%ISPERM))
-          DFDT(CC,1) = DFDT(CC,1) + TOTPERMFLUX/MESHP%VOL(CC)
+          FLUX(CC,1) = FLUX(CC,1) + TOTPERMFLUX/MESHP%VOL(CC)
        ENDIF
+       DFDT(CC,1) = FLUX(CC,1)/MESHP%VOL(CC)
     END IF
 
+    ! check that total mass is not changing
+    !GLOBALTEST = GLOBALTEST+SUM(FLUX(:,1))
+    !PRINT*, 'TESTX1:', SUM(FLUX(:,1)), GLOBALTEST, SUM(CFIELD*DSP%MESHP%VOL)   
+    
+    
     ! no change in fixed cells
     DO FC = 1,DSP%NFIELD
        DO CC = 1,MESHP%NCELL         
