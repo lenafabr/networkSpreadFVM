@@ -659,7 +659,7 @@ CONTAINS
         ENDIF
      ENDDO
 
-     PRINT*, 'Network Reservoir nodes:', NETP%NRESV
+     PRINT*, 'Network Reservoir nodes (only first 3 reservoirs printed):', NETP%NRESV
      ! only print the nodes for the first few reservoirs
      DO RC = 1,MIN(NETP%NRESV,3)
         IF (NETP%RESVNNODE(RC).GE.1) THEN

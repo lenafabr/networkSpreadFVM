@@ -313,7 +313,11 @@ CONTAINS
        
        IF (MOD(STEP,PRINTEVERY).EQ.0) THEN
 
-          CFIELD = DSP%FIELDS(:,1)*(1+DSP%FIELDS(:,2)/(DSP%FIELDS(:,1)+DSP%KDEQUIL))
+          IF (DSP%BUFFERTYPE.EQ.2) THEN! equilibrated buffers
+             CFIELD = DSP%FIELDS(:,1)*(1+DSP%FIELDS(:,2)/(DSP%FIELDS(:,1)+DSP%KDEQUIL))
+          ELSE
+             CFIELD = DSP%FIELDS(:,DSP%NFIELD)
+          ENDIF
           CALL INTEGRATEFIELD(DSP,INTFIELD,TOTLEN,.true.)          
           
           PRINT*, 'STEP, TIME, AVG FIELDS, NFIELD, EDGECLOSED, TOTAVG: ', &

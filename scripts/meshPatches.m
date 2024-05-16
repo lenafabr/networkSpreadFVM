@@ -1,6 +1,6 @@
 % create rectangular patches for displaying a meshed network
 
-function [X,Y,patchind] = meshPatches(MSH,NT,tubeR,extend)
+function [X,Y,patchind] = meshPatches(MSH,NT,radii,extend)
 % convert a mesh of a network into coordinates for plotting
 % patch rectangles along the edges
 % patchind gives the order of mesh indices for the patches
@@ -45,7 +45,12 @@ for ec = 1:NT.nedge
     startpos = interp1(NT.cumedgelen{ec},NT.edgepath{ec},startfrac*NT.cumedgelen{ec}(end));
     endpos = interp1(NT.cumedgelen{ec},NT.edgepath{ec},endfrac*NT.cumedgelen{ec}(end));
     
-    
+    if (length(radii)>1)
+        tubeR = radii(ec);  
+    else
+        tubeR = radii;
+    end
+
     % plot the edge mesh segments    
     for ic = 1:size(startpos,1)
         % make rectangle

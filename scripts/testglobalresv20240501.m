@@ -6,7 +6,7 @@ NT = NetworkObj('../test/circlenuchexresv.net',struct('dim',2));
 NT.setCumEdgeLen(1:NT.nedge);
 %% load snapshot data
 
-resdir = '../test/';
+resdir = '../testing/';
 %filename = [resdir 'testrecoveryWT.mesh.txt'];
 filename = [resdir 'testrecoverynuc.mesh.txt'];
 %filename = [resdir 'test.mesh.txt'];
@@ -102,7 +102,6 @@ S = 0.021342D0; % total binding sites
 a = 0.05;
 Vtot = sum(MSH.len(1:end-1));
 Vg = MSH.len(end);
-Atot = sum(MSH.len(1:end-1));
 
 ind = find(MSH.nodeind>0 | MSH.edgeind(:,1)'>0);
 Anuc = 2.25D3;
