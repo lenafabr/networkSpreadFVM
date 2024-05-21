@@ -253,7 +253,7 @@ SUBROUTINE READKEY
   NETWORKDIM = 0
 
   ! only output the total flux (not individual nodes)
-  OUTPUTTOTFLUXONLY = .FALSE.
+  OUTPUTTOTFLUXONLY = .TRUE.
 
   ! input reservoir elements from file
   USERESVELEMENTS = .FALSE.

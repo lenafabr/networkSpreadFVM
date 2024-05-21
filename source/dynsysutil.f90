@@ -807,24 +807,22 @@ CONTAINS
     ENDDO
 
     ! Only track flux from permeable nodes if there are some
-    TRACKFLUXPERM = TRACKFLUXPERM.AND.(NPERM.GT.0.OR.NPERMPOS.GT.0)
+    TRACKFLUXPERM = TRACKFLUXPERM.AND.(NPERM.GT.0.OR.NPERMPOS.GT.0)   
     
      IF (PERMNEARNODEDIST.GT.0.AND.NPERM.GT.0) THEN
-       ! make permeable all cells whose centers are near enough to fixed nodes
-       DO FC = 1,DSP%NFIELD
-          DO CT = 1,NPERM         
-             NC = PERMNODES(CT) ! which node
-             ! distances to the node
-             DO CC = 1,MESHP%NCELL
-                DIST = SQRT(SUM((MESHP%POS(CC,:)-NETP%NODEPOS(NC,:))**2))
-                IF (DIST.LT.PERMNEARNODEDIST) THEN
-                   DSP%ISPERM(CC) = .TRUE.
-                   DSP%PERM(CC,:) = PERMEABILITY(CT,1:DSP%NFIELD)
-                ENDIF
-             ENDDO
-          ENDDO
-       ENDDO
-    ENDIF
+        ! make permeable all cells whose centers are near enough to fixed nodes 
+        DO CT = 1,NPERM         
+           NC = PERMNODES(CT) ! which node
+           ! distances to the node
+           DO CC = 1,MESHP%NCELL
+              DIST = SQRT(SUM((MESHP%POS(CC,:)-NETP%NODEPOS(NC,:))**2))
+              IF (DIST.LT.PERMNEARNODEDIST) THEN
+                 DSP%ISPERM(CC) = .TRUE.
+                 DSP%PERM(CC,:) = PERMEABILITY(CT,1:DSP%NFIELD)                 
+              ENDIF
+           ENDDO
+        ENDDO
+     ENDIF
 
     ! Make permeable all cells within a given distance of a particular position
     IF (NPERMPOS.GT.0) THEN

@@ -213,7 +213,7 @@ CONTAINS
        IF ((STEP.LE.OUTPUTEVERYSWITCH.AND.MOD(STEP,OUTPUTEVERYSTART).EQ.0).OR.&
             & MOD(STEP,OUTPUTEVERY).EQ.0) THEN
           ! output flux to file
-          
+
           IF (TRACKFLUXPERM) THEN
              ! track flux out of permeable cells
              WRITE(OU,*) CURTIME, NFIELD, DELT, 1, COUNT(DSP%ISPERM)

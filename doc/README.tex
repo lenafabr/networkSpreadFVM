@@ -137,6 +137,42 @@ No individual keyword or  value should be longer than 100 characters.
 
 Floating point numbers can be formated as $1.0$, $1.1D0$, $10e-1$, $-1.0E+01$, etc., where the exponential notation specifier must be D or E (case insensitive). Integer numbers can also be specified in exponential notation without decimal points (eg: 1000 or 1E3). Logical values can be specified as T, F, TRUE, FALSE, 1, or 0 (with 1 corresponding to true and 0 to false).
 
+\section{Network file format}
+The network files (ending in .net for the provided examples) store information on the network structure. 
+As with the keywords control file, blank lines and lines starting with \# are ignored or treated as comments.
+
+Note that the network file does not store the spatial embedding of edges (paths). It store only the node positions, network topology (which nodes connected by which edges) and the length of the edges. Since edges are treated as effectively one-dimensional tubes, their spatial embedding is never used. This means that the output positions of mesh cells along the edges do not accurately represent the paths of curved edges. This is a problem for visualizing snapshots with curved edges afterwards (have to load separate file into matlab containing edge paths) but does not affect the calculations themselves.
+
+
+The file contains lines that start with the following keywords and values:
+\begin{itemize}
+	\item {\it NODE} (integer, 2-3 floats, optional string)
+	\begin{itemize}
+		\item Index of the node. {\color{red} The code will fail if lines for some node indices are missing.}
+		\item Node positions in 2D or 3D
+		\begin{itemize}
+			\item If NETWORKDIM is not supplied, the code will determine the dimension of the network spatial embedding from how many node positions are supplied. If you want to fix the dimension explicitly use {\it NETWORKDIM} keyword.
+		\end{itemize}
+		\item Node label. Can start with `F' or `P'. No spaces in the label
+		\begin{itemize}
+			\item P$n$. Assume this node this permeable for field $n$. ({\em eg:} P1 to be permeable for field 1)
+			\item R$n$. This node is connected to well-mixed reservoir $n$. All nodes connected to reservoir $n$ will always have identical field values.
+			\item FO. This is an obligate fixed node. It is fixed to its initial value (if FIXNODEFROMNETFILE is set). This node will always be fixed if RANDFIXNODES is used.
+			\item F or F[anything else]. This is a node that is fixed to some initial value if FIXNODEFROMNETFILE is set. If RANDFIXNODES is turned on, the node is one of the ones that can be randomly selected to be fixed (but will not necessarily be picked).
+		\end{itemize}
+	\end{itemize}
+	\item {\it EDGE} (3 integers, 1 float, 1 optional float)
+	\begin{itemize}
+		\item Index of the edge. {\color{red} The code will fail if lines for some edge indices are missing.}
+		\item Indices of the 2 nodes which the edge connects
+		\item Length of the edge. This is {\bf not} necessarily equal to the distance between the nodes as the edge might be curved. 
+		\begin{itemize}
+			\item Note that this Fortran code does not store or use the spatial embedding (path) of the edge itself. 
+		\end{itemize}
+		\item Optionally, store the radius of the edge. This is only used if USEVARRAD is turned on and EDGERADRANDTYPE is NONE (reading radii directly from net file rather than generating them randomly). If this is the case and no radius is supplied in the network file, the edge radius is set to EDGERADBASE.
+	\end{itemize}
+\end{itemize}
+
 \subsection*{List of Keyword inputs}
 
 \comment{This is currently a very incomplete list. Some lucky student is going to get the task of filling in all the implemented keywords eventually.} In the meantime, look in \verb=source/readkey.f90= for comments and default values of most of the keyword parameters. The variables set by keywords are declared in \verb=source/keys.f90=
@@ -158,6 +194,12 @@ By default, the simulations work with concentrations in units of $mM \times \pi 
 	\item Set initial concentration for each field in all the mesh elements that do *not* have a specific starting concentration set through STARTCONC
 \end{itemize}
 %
+\item {\it CEXT}
+\begin{itemize}
+	\item  value: 1 or more floats (one for each field); default: 0
+	\item Set `external' concentration for each field. This is used only when calculating flux out of permeable mesh cells (see PERMNODE keyword for details)
+\end{itemize}
+%
 \item {\it DELT}
     \begin{itemize}
       \item  value: 1 float; default 1D-4
@@ -169,6 +211,23 @@ By default, the simulations work with concentrations in units of $mM \times \pi 
 \begin{itemize}
 	\item  value: 1 optional logical; default: true 
 	\item Include advective flow along edges
+\end{itemize}
+%
+\item {\it EDGERADBASE}
+\begin{itemize}
+	\item  value: 1 float; default $\sqrt{1/\pi}$
+	\item Default radius of edge tubules. This is used only if \verb=USEVARRAD= is true, \verb=EDGERADRANDTYPE= is `None', and the radius of a particular edge is not provided in the network file.
+\end{itemize}
+%
+\item {\it EDGERADRAND}
+\begin{itemize}
+	\item  value: 1 string; up to 10 optional floats. Defaults: `None'
+	\item Use this to generate a random value for the radius of each network edge (assumed to be constant along the edge). 
+	\item String is the type of distribution for the random edge radii. Floats are the parameters governing the distribution.
+	\begin{itemize}
+		\item `None': do not use random radii. Instead read in radii from the network file, or use \verb=EDGERADBASE= by default if no value provided in network file.
+		\item `Uniform': uniformly select radius for each edge between some minimum and maximum value (2 parameters provided as floats).
+	\end{itemize}
 \end{itemize}
 %
 \item {\it GLOBALRESERVOIR}
@@ -233,10 +292,31 @@ By default, the simulations work with concentrations in units of $mM \times \pi 
       \item The integer $N$ indicates the flux will be written to the file every $N$ timesteps of the simulation. This can also be set separately with keyword OUTPUTEVERY
       \end{itemize}
 %
+\item {\it OUTPUTEVERYSTART}
+\begin{itemize}
+	\item  value: 2 integers, \verb=OUTPUTEVERYSWITCH= and \verb=OUTPUTEVERYSTART=; defaults: 0, 10
+	\item  default: 0 10
+	\item Output flux more often at the start of the run (when there might be very steep release profiles). The two integers are: \verb=OUTPUTEVERYSWITCH= (output more frequently until you hit this number of steps) and \verb=OUTPUTEVERYSTART= (how often to output for the initial period)
+\end{itemize}
+%
+\item {\it OUTPUTTOTFLUXONLY}
+\begin{itemize}
+	\item  value: 1 optional logical; default: True
+	\item Output total flux out of the network into the OUTFILE. If set to false, then will output flux from each of the permeable or fixed nodes.
+\end{itemize}
+%
 \item {\it PRINTEVERY}
 \begin{itemize}
 	\item  value: 1 integer; default: 1
 	\item Print simulation progress to screen every so many steps
+\end{itemize}
+%
+\item {\it PERMNEARNODEDIST}
+\begin{itemize}
+	\item  value: 1 float; default: -1.0
+	\item Any mesh cell within the given spatial distance of a permeable node will also be made permeable.
+	\item {\color{red} Warning: unintuitive behavior.} because the Fortran code does not know the spatial embedding of the edges (edgepaths), it will stretch the edges out as if they were the same length but straight. This means that up until a neighboring node is hit, the distance set by this keyword is a graph distance rather than a spatial distance. The two are not the same for curved edges.
+	\item If the value given is negative then only the mesh cell corresponding to specified nodes (set via PERMNODE keyword) is made permeable. {\color{red} Warning:} if this is a terminal node (which does not get its own mesh cell), then it will not be permeable at all until PERMNEARNODEDIST is big enough to include the center of the adjacent mesh cell
 \end{itemize}
 %
 \item {\it PERMNODE}
@@ -260,11 +340,10 @@ By default, the simulations work with concentrations in units of $mM \times \pi 
 
 \item {\it PERMPREFACTOR}
 \begin{itemize}
-	\item  value: 1 optional logical
-	\item If this is true, then the permeability value set by PERMNODE is treated as a prefactor, to be scaled by $A\cdot D$ when incorporated into simulations
-	\item If keyword is not supplied, it is set to F 
-	\item If keyword is supplied but there is no value, it is set to T
+	\item  value: 1 optional logical; default: False if keyword not supplied. True if keyword is supplied by itself
+	\item If this is true, then the permeability value set by PERMNODE is treated as a prefactor, to be scaled by $A\cdot D$ (where $A$ is surface area of mesh cell and $D$ is particle diffusivity) when incorporated into simulations	
 	\item {\color{red} Strongly recommended: set this to true} (larger mesh elements should have higher permeability)
+	\item If this is false, then the permeability is set directly by the value given via PERMNODE keyword, regardless of mesh cell size
 \end{itemize}
 %
 %\item {\it RECOVERY}
@@ -309,6 +388,13 @@ By default, the simulations work with concentrations in units of $mM \times \pi 
 \begin{itemize}
 	\item  value: 1 optional logical; default false
 	\item Assume the concentration of total buffer sites is uniform in space. This is true if there are no flows and  no leakage of buffer
+\end{itemize}
+%
+\item {\it USEVARRAD}
+\begin{itemize}
+	\item value: 1 optional logical; default true if keyword is present, false otherwise
+	\item If this is set to true, then each mesh cell is assigned a radius that may vary along or between edges and affects flux from one mesh cell to another. 
+	\item Control how edge radii are assigned with EDGERADBASE, EDGERADRAND
 \end{itemize}
 %
 \item {\it VERBOSE}

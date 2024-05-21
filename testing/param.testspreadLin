@@ -1,4 +1,9 @@
-# parameter file for calcium release from a network
+# parameter file for testing a simple case
+# linear network with 3 nodes
+# start with uniform buffer everywhere
+# free calcium around node 2 only
+# Watch spread over time
+
 ACTION rundynamics
 
 # set random number generator by system time and file name 
@@ -37,18 +42,14 @@ OUTPUTTOTFLUXONLY T
 # ----------------
 # initial conditions
 # ---------------
-# start uniformly distributed along all network edges
-#STARTEDGES -2
+# start near central node
 STARTNODES 2
 #STARTNODERAD 1.5D0
 # initial concentrations of (1) free calcium and (2) total protein
 # these are linear concentrations
 # (Units: mM concentration * pi*a^2, where a is the tubule radius)
 # ER radius is approximately 0.05um
-#STARTCONC 0D0 0D0
 STARTCONC 0.003927D0 0.021342D0
-#STARTCONC 0.003927D0 0D0
-#STARTCONC 0.0D0 0.021342D0
 # background concentration in all cells
 BACKGROUNDCONC 0D0 0.021342D0
 
@@ -68,28 +69,11 @@ DCOEFF 27.55D0 2.755D0
 # reservoirs:
 # -------------
 # include large well-mixed reservoirs in the system?
-# Here the reservoir represents a perinuclear region
-# nodes connected to the reservoirs are listed within the network file
-# eg: all nodes marked R1 belong to reservoir 1
+# In this test case, there are NO RESERVOIRS
 DORESERVOIRS F
-# for a 15um-diam nucleus with single sheet 60nm high, tube radius 50nm
-# 1) Reservoir volume in units of length, given as V/(pi a^2)
-# 2) Reservoir surface area, given as A/(2*pi*a)
-# 3) Effective length for a sheet (see manuscript)
-RESVINFO 1 5.4D3 2.25D3 0.2377D0
-
-# include a global reservoir (cytoplasm) with active recovery pumping
-# back into the ER network
-# values: volume of the cytoplasm (in um^3/(pi a^2)),
-# recovery rate (per area per time), recovery saturation conc (in mM*pi*a^2)
-# pumping out rate (per time), saturation concentration
-# permeable nodes release into reservoir
-#GLOBALRESERVOIR 2.55D5 100D0 1D0 0D0 10D0 F
-
-# starting concentration in global reservoir: 0.08 mM
-#GLOBALRESERVOIRSTART 6.4093D-4
 
 # spatially uniform buffer
 UNIFORMBUFFER F
 
-TRACKDCDT f
+# Different approach to tracking free calcium concs
+#TRACKDCDT f

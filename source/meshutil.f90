@@ -24,7 +24,7 @@ MODULE MESHUTIL
      ! for reservoir is specified directly in terms of SA = (surface area)/(2*pi*a)
      ! LENPM: length to the center of each adjacent cell (h_plus, h_minus in the math notes motation)
      ! RAD: radius for each mesh cell
-     ! NOTE: radius is only used if USEVARRAD keyword is on
+     ! NOTE: radius is only used if USEVARRAD keyword is on and CONCENTRATIONS3D keyword is off
      DOUBLE PRECISION, POINTER :: POS(:,:), LEN(:), LENPM(:,:), VOL(:)
      DOUBLE PRECISION, POINTER :: SA(:), RAD(:)
      ! number of neighbors for each cell
@@ -923,7 +923,6 @@ CONTAINS
   
   SUBROUTINE SETMESHRADII(MESHP,NETP)
     ! Set up radii for each mesh cell.
-    ! Also change volume of each non-reservoir mesh cell to be in terms of actual volume units.
     ! node and reservoir radii are set to average of the connected edge radii
     ! for now, sets radii based on radius of network edge
     ! TODO: UPDATE TO ALLOW SINUSOIDALLY VARYING RADII ALONG AN EDGE
