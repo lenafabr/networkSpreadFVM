@@ -137,7 +137,7 @@ CONTAINS
 
 
     CALL INTEGRATEFIELD(DSP,INTFIELD,TOTLEN,.true.)
-    PRINT*, 'TESTX1:',  CURTIME
+    PRINT*, 'TESTX1:',  CURTIME, TOTLEN
     PRINT*, 'TESTX1B:', INTFIELD/TOTLEN, NFIELD
     PRINT*, 'TESTX2:', DBLE(COUNT(EDGECLOSED))
     PRINT*, 'TESTX3:', NETP%NEDGE
@@ -685,6 +685,7 @@ CONTAINS
                 ! Only for boundaries along an edge, only if using varrad
                 IF (DSP%VARRAD.AND.MESHP%CELLTYPE(CC).EQ.1.AND.MESHP%CELLTYPE(BC).EQ.1) THEN
                    DR = MESHP%RAD(BC)-MESHP%RAD(CC)
+                   ! This is formula 1.8 in Berezhkovskii, 2007 (originally from Reguerra, 2001)
                    DSCL = SQRT(1 + (DR/MESHP%LENPM(CC,BCT))**2)
                 ELSE
                    DSCL = 1D0
@@ -693,7 +694,8 @@ CONTAINS
                 ! area of cell boundary
                 ABOUND = MESHP%BOUNDAREA(CC,BCT)
 
-                ! flux for total ligand                
+                ! flux for total ligand
+                ! This is formula 1.6 from Berezhkovskii, 2007 (where FIELDS is c/A, the 3D concentration)
                 FLUXDIFF(1) = FLUXDIFF(1) &
                      & + DSP%DCOEFF(1)/DSCL*ABOUND*(DSP%FIELDS(BC,1) &
                      & - DSP%FIELDS(CC,1))/MESHP%LENPM(CC,BCt) &

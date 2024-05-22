@@ -200,6 +200,15 @@ By default, the simulations work with concentrations in units of $mM \times \pi 
 	\item Set `external' concentration for each field. This is used only when calculating flux out of permeable mesh cells (see PERMNODE keyword for details)
 \end{itemize}
 %
+\item {\it CONCENTRATIONS3D}
+\begin{itemize}
+	\item  value: 1 optional logical; default is F if keyword not supplied, T if keyword supplied by itself
+	\item Evolve 3D concentrations (eg: dimensions of per length cubed) rather than the default 1D concentrations
+	\item {\color{red} Warning: } this has not been fully tested with all variants of the model
+	\item This must be turned on when using 3D mesh elements supplied via RESVELEMENTS
+	\item If converting from tracking 1D concentrations to tracking 3D ones, make sure to update the values of these keywords: STARTCONC, BACKGROUNDCONC, CEXT, PERMNODE, KDEQUIL, EDGERADBASE
+\end{itemize}
+%
 \item {\it DELT}
     \begin{itemize}
       \item  value: 1 float; default 1D-4
@@ -227,6 +236,17 @@ By default, the simulations work with concentrations in units of $mM \times \pi 
 	\begin{itemize}
 		\item `None': do not use random radii. Instead read in radii from the network file, or use \verb=EDGERADBASE= by default if no value provided in network file.
 		\item `Uniform': uniformly select radius for each edge between some minimum and maximum value (2 parameters provided as floats).
+	\end{itemize}
+\end{itemize}
+%
+\item {\it EDGERADVAR}
+\begin{itemize}
+	\item  value: 1 string; 1-10 optional floats. Defaults: `constant', $1/\sqrt{pi}$
+	\item Use this to control tubule radii that vary along edges
+	\item String is the type of function to use for defining the radius along the tube. Floats are the parameters for the function.
+	\begin{itemize}
+		\item `constant': Use a constant radius. 1 parameter: radius value. If parameter is not supplied, instead read in radii from the network file, or use \verb=EDGERADBASE= by default if no value provided in network file.
+		\item 'linear': Radius varies linearly along each edge. 2 parameters: initial radius and final radius.
 	\end{itemize}
 \end{itemize}
 %

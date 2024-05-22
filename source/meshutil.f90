@@ -56,10 +56,12 @@ MODULE MESHUTIL
      ! EDGEIND(:,1) gives which edge, EDGEIND(:,2) gives which cell along the edge
      ! RESVIND lists which reservoir each cell belongs to; lists 0 otherwise
      INTEGER, POINTER :: NODEIND(:), EDGEIND(:,:), RESVIND(:)
+     ! edgepos gives distance along the edge for the center of this mesh cell
+     DOUBLE PRECISION, POINTER :: EDGEPOS(:)
      ! Boundedge gives the edge index for each boundary from this cell
      INTEGER, POINTER :: BOUNDEDGE(:,:)
      ! for cells with a reflective boundary, what terminal node does it correspond to?
-     INTEGER, POINTER :: TERMNODE(:,:)
+     INTEGER, POINTER :: TERMNODE(:,:)    
 
      ! dealing with global reservoir with pumping kinetics
      LOGICAL :: USEGLOBALRESV
@@ -230,7 +232,8 @@ CONTAINS
     PRINT*, 'Closed N boundaries out of total:', NCLOSE, NTOT/2, PTRY, PCLOSE
   END SUBROUTINE CLOSEBOUNDSOLD
   
-  SUBROUTINE SETUPNETWORKMESH(MESHP,NETP,MAXCELLLEN,MINNCELL,CONC3D,USEGLOBALRESV,GLOBALRESVOL,RESVP)
+  SUBROUTINE SETUPNETWORKMESH(MESHP,NETP,MAXCELLLEN,MINNCELL,CONC3D,&
+       & USEGLOBALRESV,GLOBALRESVOL,EDGERADVARTYPE,EDGERADVARPARAMS,RESVP)
     IMPLICIT NONE
     ! using a network object, set up a mesh on it for FVM simulations
     ! * CELL-CENTERED mesh. Same distance from cell position to each boundary *
@@ -252,7 +255,8 @@ CONTAINS
     DOUBLE PRECISION, INTENT(IN) :: MAXCELLLEN
     INTEGER, INTENT(IN) :: MINNCELL
     logical, INTENT(IN) :: CONC3D, USEGLOBALRESV
-    DOUBLE PRECISION, INTENT(IN) :: GLOBALRESVOL
+    DOUBLE PRECISION, INTENT(IN) :: GLOBALRESVOL, EDGERADVARPARAMS(:)
+    CHARACTER(LEN=*), INTENT(IN) :: EDGERADVARTYPE
     
     INTEGER :: EC, NC, CC, CT, N1, N2, D1, D2, BC, RC, bct, CCT
     INTEGER :: NCELL
@@ -467,9 +471,10 @@ CONTAINS
 
           CT = CT+1      
           ! cell position and length
-          CX1 = NODECELLLEN(N1)/NETP%NODEDEG(N1)
+          CX1 = NODECELLLEN(N1)/NETP%NODEDEG(N1)         
+          MESHP%EDGEPOS(CT) = (CX1+((CC-1) + 0.5D0)*EDGECELLLEN(EC)) ! position along the edge
           MESHP%POS(CT,:) =  NETP%NODEPOS(N1,:) + &
-               & (CX1+((CC-1) + 0.5D0)*EDGECELLLEN(EC))*NETP%EDGEDIR(EC,:)
+               & MESHP%EDGEPOS(CT)*NETP%EDGEDIR(EC,:) ! Position in 3D space
           MESHP%LEN(CT) = EDGECELLLEN(EC)
           MESHP%VOL(CT) = MESHP%LEN(CT)
           MESHP%SA(CT) = MESHP%LEN(CT)
@@ -726,7 +731,7 @@ CONTAINS
     !MESHP%RAD = SQRT(1D0/PI)
 
     ! set mesh radii
-    CALL SETMESHRADII(MESHP,NETP)        
+    CALL SETMESHRADII(MESHP,NETP,EDGERADVARTYPE,EDGERADVARPARAMS)        
     CALL SETMESHBOUNDAREAS(MESHP,NETP)
     
     ! set up to work with 3D concentrations
@@ -920,12 +925,69 @@ CONTAINS
   END SUBROUTINE RESERVOIRSTOMESH
 
 
+  SUBROUTINE SETMESHRADII(MESHP,NETP,EDGERADVARTYPE,EDGERADVARPARAMS)
+    ! set radii for each mesh cell (could be variable or constant, copied from NETP)
+    IMPLICIT NONE
+    TYPE(MESH), POINTER :: MESHP
+    TYPE(NETWORK), POINTER :: NETP
+    CHARACTER(LEN=*) :: EDGERADVARTYPE
+    DOUBLE PRECISION :: EDGERADVARPARAMS(:)
+    INTEGER :: CC, EC, BCC, BC, MC
+    DOUBLE PRECISION :: R1, R2, TOTRAD
+    
+    ! Default radii: note that this is never used for reservoirs with no connected nodes
+    MESHP%RAD = 0D0
+
+    SELECT CASE (EDGERADVARTYPE)
+    CASE('CONSTANT')
+       ! copy constant radii from NETP
+       CALL SETMESHRADIIFROMEDGES(MESHP,NETP)
+    CASE('LINEAR')
+       ! linearly increasing radii along each edge
+
+       ! starting and ending radii
+       R1 = EDGERADVARPARAMS(1); R2 = EDGERADVARPARAMS(2)
+
+       ! set radii for each of the edge mesh elements
+       DO EC = 1,NETP%NEDGE
+          DO MC = 1,NETP%EDGENCELL(EC)
+             CC = NETP%EDGECELLS(EC,MC)
+
+             IF (.NOT.MESHP%CELLTYPE(CC).EQ.1) THEN
+                PRINT*, 'BAD edge cell type'
+                STOP 1
+             ENDIF
+
+             MESHP%RAD(CC) = R1 + MESHP%EDGEPOS(CC)/NETP%EDGELEN(EC)*(R2-R1)
+          ENDDO
+       ENDDO
+
+       ! Set radii for each of the node and reservoir mesh elements
+       DO CC = 1,MESHP%NCELL
+          IF (MESHP%CELLTYPE(CC).EQ.0.OR.MESHP%CELLTYPE(CC).EQ.2) THEN
+             ! node cell or reservoir cell
+             ! Set radius to be average of the connected mesh cells
+
+             TOTRAD = 0D0
+             DO BCC = 1,MESHP%DEG(CC)
+                BC = MESHP%BOUNDS(CC,BCC)
+                TOTRAD = TOTRAD + MESHP%RAD(BC)
+             ENDDO
+             MESHP%RAD(CC) = TOTRAD/MESHP%DEG(CC)
+          ENDIF
+       ENDDO
+    CASE DEFAULT
+       PRINT*, 'ERROR IN SETMESHRADII: unknown value for edgeradvartype. Must be CONSTANT or LINEAR', &
+            & EDGERADVARTYPE
+    END SELECT
+    
+  END SUBROUTINE SETMESHRADII
   
-  SUBROUTINE SETMESHRADII(MESHP,NETP)
+  SUBROUTINE SETMESHRADIIFROMEDGES(MESHP,NETP)
     ! Set up radii for each mesh cell.
     ! node and reservoir radii are set to average of the connected edge radii
     ! for now, sets radii based on radius of network edge
-    ! TODO: UPDATE TO ALLOW SINUSOIDALLY VARYING RADII ALONG AN EDGE
+    ! NOTE: this sets a constant radius along each edge (copied from NETP)    
     
     IMPLICIT NONE
     TYPE(MESH), POINTER :: MESHP
@@ -983,10 +1045,10 @@ CONTAINS
           ENDIF
 
        END SELECT
-       
+
     ENDDO
        
-  END SUBROUTINE SETMESHRADII
+  END SUBROUTINE SETMESHRADIIFROMEDGES
 
   SUBROUTINE SETMESHBOUNDAREAS(MESHP,NETP)
     ! set areas of boundaries between mesh elements
@@ -1041,7 +1103,7 @@ CONTAINS
        CASE (1) ! edge cell
           ! set both boundaries to cross-sectional area of the edge
           MESHP%BOUNDAREA(CC,1) = PI*MESHP%RAD(CC)**2
-          MESHP%BOUNDAREA(CC,2) = MESHP%BOUNDAREA(CC,1)
+          MESHP%BOUNDAREA(CC,2) = MESHP%BOUNDAREA(CC,1)          
        CASE (2) ! reservoir cell
           DO BC = 1,MESHP%DEG(CC)
              CC2 = MESHP%BOUNDS(CC,BC) ! boundary cell
@@ -1056,6 +1118,8 @@ CONTAINS
              ENDIF
           ENDDO
        END SELECT
+
+       !print*, 'testx3:', CC, meshp%celltype(cc), MESHP%RAD(CC), MESHP%BOUNDAREA(CC,1)
     ENDDO
     
     
@@ -1121,6 +1185,7 @@ CONTAINS
          & MESHP%LENPM(NCELLTOT,MAXDEG), MESHP%SA(NCELLTOT))
     ALLOCATE(MESHP%DEG(NCELLTOT),MESHP%BOUNDS(NCELLTOT,MAXDEG))
     ALLOCATE(MESHP%CELLTYPE(NCELLTOT),MESHP%NODEIND(NCELLTOT), MESHP%EDGEIND(NCELLTOT,2), MESHP%TERMNODE(NCELLTOT,MAXDEG))
+    ALLOCATE(MESHP%EDGEPOS(NCELLTOT))
     ALLOCATE(MESHP%BOUNDDIR(NCELLTOT,MAXDEG), MESHP%BOUNDEDGE(NCELLTOT,MAXDEG), MESHP%BOUNDCLOSED(NCELLTOT,MAXDEG))
     ALLOCATE(MESHP%RESVIND(NCELLTOT), MESHP%RAD(NCELLTOT), MESHP%BOUNDAREA(NCELLTOT,MAXDEG))
     
@@ -1143,7 +1208,7 @@ CONTAINS
     
     DEALLOCATE(MESHP%POS, MESHP%LEN, MESHP%LENPM, MESHP%VOL, MESHP%SA)
     DEALLOCATE(MESHP%DEG,MESHP%BOUNDS)
-    DEALLOCATE(MESHP%CELLTYPE,MESHP%NODEIND, MESHP%EDGEIND)
+    DEALLOCATE(MESHP%CELLTYPE,MESHP%NODEIND, MESHP%EDGEIND, MESHP%EDGEPOS)
     DEALLOCATE(MESHP%TERMNODE, MESHP%BOUNDDIR, MESHP%BOUNDEDGE, MESHP%BOUNDCLOSED)
     DEALLOCATE(MESHP%RESVIND, MESHP%RAD, MESHP%BOUNDAREA)
     

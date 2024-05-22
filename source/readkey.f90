@@ -247,6 +247,8 @@ SUBROUTINE READKEY
   EDGERADRANDTYPE = 'NONE'
   EDGERADRANDPARAMS = 0
   EDGERADBASE = SQRT(1/PI) ! default edge radius
+  EDGERADVARTYPE = 'CONSTANT'
+  EDGERADVARPARAMS = 0
   
   ! if positive, predefines a network dimension
   ! otherwise, dimension set to # items in NODE row of network file - 2
@@ -258,9 +260,6 @@ SUBROUTINE READKEY
   ! input reservoir elements from file
   USERESVELEMENTS = .FALSE.
   RESVELEMENTFILE = '*.resv.txt'
-
-  ! include calculations involving flow velocities along edges
-  USEEDGEFLOW = .TRUE.
 
   ! concentrations are expressed as 3D rather than 1D quantities
   CONCENTRATIONS3D = .FALSE.
@@ -438,6 +437,11 @@ SUBROUTINE READKEY
            CALL READA(EDGERADRANDTYPE,1)
            DO I = 1,MIN(NITEMS-2,10)
               CALL READF(EDGERADRANDPARAMS(I))
+           ENDDO
+        CASE('EDGERADVAR')
+           CALL READA(EDGERADVARTYPE,1)
+           DO I = 1,MIN(NITEMS-2,10)
+              CALL READF(EDGERADVARPARAMS(I))
            ENDDO
         CASE('FASTEQUIL')
            IF (NITEMS.GT.1) THEN
@@ -758,13 +762,7 @@ SUBROUTINE READKEY
               CALL READO(UNIFORMBUFFER)
            ELSE
               UNIFORMBUFFER = .TRUE.
-           ENDIF
-        CASE('USEEDGEFLOW')
-           IF (NITEMS.GT.1) THEN
-              CALL READO(USEEDGEFLOW)
-           ELSE
-              USEEDGEFLOW = .TRUE.
-           ENDIF
+           ENDIF        
         CASE('USEPERMPREFACTOR')
            IF (NITEMS.GT.1) THEN
               CALL READO(USEPERMPREFACTOR)
@@ -884,7 +882,7 @@ SUBROUTINE READKEY
 
   print*, 'Work with 3D concentrations? Or meshed reservoirs?:', CONCENTRATIONS3D, USERESVELEMENTS
   
-  print*, 'Flows along edges?:', USEEDGEFLOW, RUNSPEED  
+  print*, 'Flows along edges?:', DOFLOW, RUNSPEED  
   
  !print*, 'CONTSPEED, CONTFLOW, OPENRATE:', CONTSPEED, CONTFLOW, OPENRATE
   print*, 'DCOEFF:', dcoeff
@@ -898,8 +896,9 @@ SUBROUTINE READKEY
   ENDIF
   IF (USEVARRAD) THEN
      PRINT*, 'Allowing for variable mesh cell radii'
-     PRINT*, 'EDGERADRAND: ', EDGERADRANDTYPE, EDGERADRANDPARAMS
   ENDIF
+     PRINT*, 'EDGERADRAND: ', EDGERADRANDTYPE, EDGERADRANDPARAMS
+     PRINT*, 'EDGERADVAR: ', EDGERADVARTYPE, EDGERADVARPARAMS
   print*, '----------------------------------------------------'
 
 END SUBROUTINE READKEY

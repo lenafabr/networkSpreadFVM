@@ -1,0 +1,7 @@
+# file defining network structure
+# made with matlab NetworkObj output
+
+# list of node indices and xy positions and values 
+NODE 1         1.0000000000         0.0000000000         0.0000000000  
+NODE 2         3.0000000000         0.0000000000         0.0000000000  
+EDGE 1 1 2         2.0000000000

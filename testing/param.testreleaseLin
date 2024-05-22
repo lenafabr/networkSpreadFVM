@@ -1,0 +1,90 @@
+# parameter file for testing a simple case
+# linear network with 3 nodes
+# start with uniform buffer everywhere
+# free calcium around node 2 only
+# Watch spread over time, with one permeable node at the end
+
+ACTION rundynamics
+
+# set random number generator by system time and file name 
+RNGSEED -2
+
+
+# network structure stored in this file
+#NETFILE circlenuchexresv.net
+NETFILE linear3.net
+# dimension of the network
+NETWORKDIM 2
+
+# No flow velocity on edges
+DOFLOW F
+
+# file for outputting mesh structure
+MESHFILE *.mesh.txt
+# meshing parameters: this gives the maximal size of a mesh cell
+MESHSIZE 0.1D0 1
+
+# ----------------------
+# dynamic run and output parameters
+# -----------------------
+# how many steps to run
+NSTEP 8D5
+# timestep size
+DELT 2D-6
+# how often to dump snapshots and in what file
+SNAPSHOTS 1D3 *.snap.txt
+# how often to print output on screen
+PRINTEVERY 2D3
+# output flux to file every so many steps
+OUTFILE *.out 100
+
+
+# ----------------
+# initial conditions
+# ---------------
+# start near central node
+STARTNODES 2
+#STARTNODERAD 1.5D0
+# initial concentrations of (1) free calcium and (2) total protein
+# these are linear concentrations
+# (Units: mM concentration * pi*a^2, where a is the tubule radius)
+# ER radius is approximately 0.05um
+STARTCONC 0.003927D0 0.021342D0
+# background concentration in all cells
+BACKGROUNDCONC 0D0 0.021342D0
+
+# permeability: mesh cells surrounding one of the nodes
+# are set to have a certain permeability (10 * mesh cell area * diffusivity)
+PERMNODE 3 100D0
+USEPERMPREFACTOR T
+# mesh cell centers within this distance of the specified node are permeable
+# warning: this is taken as a spatial distance, but will be off if edges are curved. 
+PERMNEARNODEDIST 0.1D0
+# external concentrations for permeable flux
+CEXT  0D0 0D0
+
+
+# -------------
+# Buffer binding parameters
+# -------------
+# include binding to buffer proteins?
+DOBUFFER T
+# take the limit of fast binding equilibration?
+FASTEQUIL T
+# equilibrium binding dissociation constant (linear concentration units: mM*pi*a^2)
+KDEQUIL 0.001583D0
+# diffusion coefficient of (1) free calcium (2) buffer protein
+DCOEFF 27.55D0 2.755D0
+
+# ------------
+# reservoirs:
+# -------------
+# include large well-mixed reservoirs in the system?
+# In this test case, there are NO RESERVOIRS
+DORESERVOIRS F
+
+# spatially uniform buffer
+UNIFORMBUFFER F
+
+# Different approach to tracking free calcium concs
+#TRACKDCDT f

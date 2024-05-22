@@ -165,18 +165,18 @@ MODULE KEYS
   ! keep track of radius along mesh elements
   ! otherwise assume constant radius for all
   LOGICAL :: USEVARRAD
-  ! randomizing net
-  CHARACTER(LEN=100) :: EDGERADRANDTYPE
-  DOUBLE PRECISION :: EDGERADRANDPARAMS(10)
+  ! randomizing radii along edges
+  ! or setting varying radii along each edge
+  CHARACTER(LEN=100) :: EDGERADRANDTYPE, EDGERADVARTYPE
+  DOUBLE PRECISION :: EDGERADRANDPARAMS(10), EDGERADVARPARAMS(10)
   DOUBLE PRECISION :: EDGERADBASE ! default edge radius
   
   ! Reservoir elements
   LOGICAL :: USERESVELEMENTS
   CHARACTER(LEN=100) :: RESVELEMENTFILE
 
-  ! include flow calculations?
   ! treat concentrations as 3D?
-  LOGICAL :: USEEDGEFLOW, CONCENTRATIONS3D
+  LOGICAL ::  CONCENTRATIONS3D
 
   ! Periodic global permeability
   DOUBLE PRECISION :: PERIODGLOBALPERM, DURGLOBALPERM
