@@ -718,9 +718,9 @@ CONTAINS
                 DSCL = SQRT(1 + (DR/MESHP%LENPM(CC,BCT))**2)
                 ! areas in the two membrane cell, and average at boundary
                 A1 = PI*MESHP%RAD(BC)**2; A2 = PI*MESHP%RAD(CC)**2
-                ABOUND = (A1 + A2)/2
+                ABOUND = PI*((MESHP%RAD(BC)+MESHP%RAD(CC))/2)**2
                 !ABOUND = MESHP%BOUNDAREA(CC,BCT)
-                
+
                 ! flux for total ligand
                 FLUXDIFF(1) = FLUXDIFF(1) &
                      & + DSP%DCOEFF(1)/DSCL*ABOUND*(DSP%FIELDS(BC,1)/A1 &
@@ -828,7 +828,7 @@ CONTAINS
        ENDIF
        
        IF (.NOT.DSP%TRACKDCDT) THEN
-          ! get change in free ligand from delta total lig and delta total prot
+          ! get change in free ligand from delta total lig and delta total prot          
           LKD = DSP%FIELDS(CC,1) + DSP%KDEQUIL;
           IF (DSP%UNIFORMBUFFER) THEN ! spatially constant buffer
              DFDT(CC,1) = DFDT(CC,1)/ &            
@@ -837,7 +837,7 @@ CONTAINS
              DFDT(CC,1) = (DFDT(CC,1) - DSP%FIELDS(CC,1)*DFDT(CC,2)/LKD)/ &            
                   & (1 + DSP%FIELDS(CC,2)*DSP%KDEQUIL/LKD**2)
           ENDIF
-       ENDIF
+       END IF
     ENDDO
     
     IF (MESHP%USEGLOBALRESV) THEN             

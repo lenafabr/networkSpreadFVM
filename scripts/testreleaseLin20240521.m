@@ -1,16 +1,17 @@
 addpath('../../networktools')
 
 %% load network data
-NT = NetworkObj('../testing/linear3.net',struct('dim',2));
+NT = NetworkObj('../testing/linear2.net',struct('dim',2));
 NT.interpolateEdgePaths(2);
 NT.setCumEdgeLen();
 
 %% load snapshot data
-resdir = '../testing/';
-filename = [resdir 'testspreadLin.mesh.txt'];
+resdir = '../testing/'; 
+runname = 'testspreadCone';
+filename = [resdir runname '.mesh.txt'];
 MSH = MeshObj(filename);
 
-snapfile = [resdir 'testspreadLin.snap.txt'];
+snapfile = [resdir runname '.snap.txt'];
 [field,snaptimes,vels] = loadSnapshotFVM(snapfile);
 nsnap = length(snaptimes);
 
@@ -20,7 +21,7 @@ showtime = 2; % time at which to show in sec
  Rabs = 0.25;
  tubeR = 0.05;
  clf
-for sc = 7%:nsnap
+for sc =1%:nsnap
     [sc nsnap]
     ind = find(MSH.resvind==0);    
     %intpos = interpolateMeshPos(MSH,NT);    
@@ -34,12 +35,12 @@ for sc = 7%:nsnap
    
     colormap copper
         
-    caxis([0,0.09])
+    caxis([0,0.5])
 
     %title(sprintf('Snap %d time %f', sc, snaptimes(sc)))
     % title('WT region 1')    
    
-    set(gca,'Visible','off')    
+    %set(gca,'Visible','off')    
     colorbar; 
     plot_cleanup(gca,'FontSize',14,'pcolor',true)
     
@@ -52,12 +53,13 @@ hold off
 %% plot concentration profiles
 % sort mesh cells by position
 [xplot,sortind] = sort(MSH.pos(:,1));
-
+meshvol = MSH.len.*MSH.rad'.^2*pi;
 
 fieldplot = squeeze(field(sortind,1,2:2:50));
 cmap = jet(size(fieldplot,2));
 
-plot(xplot,fieldplot,'.-')
+%plot(xplot,fieldplot,'.-')
+plot(xplot,fieldplot./MSH.rad(sortind)'.^2/pi,'.-')
 colororder(cmap)
 
 %% load concs and check total concentration over time
@@ -101,7 +103,7 @@ legend off
 
 %% load snapshot data
 resdir = '../testing/';
-runname = 'testreleaseLin'
+runname = 'testspreadCone'
 filename = [resdir runname '.mesh.txt'];
 MSH = MeshObj(filename);
 
@@ -133,16 +135,16 @@ xlabel('time (sec)')
 ylabel('cumulative released (ions)')
 
 %% explicitly 3D concentrations
-runname = 'testreleaseLin3DmM'
+runname = 'testreleaseLin3D'
 %% load and plot flux over time
-% TODO: is edgeradbase only used when usevarrad is turned on???
+
 [flux,tvals,cumflux,tavg] = loadTotFluxSim([resdir runname '.out']);    
 
-plot(tvals,flux*mMum,'.-')
+plot(tvals,flux,'.-')
 xlabel('time (sec)')
 ylabel('flux (ions per sec)')
 
 %%
-plot(tavg,cumflux*mMum,'.-')
+plot(tavg,cumflux,'.-')
 xlabel('time (sec)')
 ylabel('cumulative released (ions)')

@@ -90,11 +90,9 @@ DORESERVOIRS F
 # spatially uniform buffer
 UNIFORMBUFFER F
 
-# Different approach to tracking free calcium concs
-#TRACKDCDT f
-
 # Set radius of edge tubules in um
 EDGERADBASE 0.05D0
 
 # work with 3D concentrations
 CONCENTRATIONS3D T
+

@@ -44,13 +44,15 @@ OUTFILE *.out 1D6
 # initial conditions
 # ---------------
 # start near central node
-STARTNODES 2
-#STARTNODERAD 1.5D0
+#STARTNODES 2
+STARTPOS 2D0 0D0
+STARTNODERAD 0.05D0
 # initial concentrations of (1) free calcium and (2) total protein
 # these are linear concentrations
 # (Units: mM concentration * pi*a^2, where a is the tubule radius)
 # ER radius is approximately 0.05um
 STARTCONC 0.003927D0 0.021342D0
+#STARTCONC 0.003927D0 0D0
 # background concentration in all cells
 BACKGROUNDCONC 0D0 0.021342D0
 
@@ -76,5 +78,6 @@ DORESERVOIRS F
 # spatially uniform buffer
 UNIFORMBUFFER F
 
-# Different approach to tracking free calcium concs
-#TRACKDCDT f
+
+# use varying radii
+USEVARRAD T

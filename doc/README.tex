@@ -365,21 +365,7 @@ By default, the simulations work with concentrations in units of $mM \times \pi 
 	\item {\color{red} Strongly recommended: set this to true} (larger mesh elements should have higher permeability)
 	\item If this is false, then the permeability is set directly by the value given via PERMNODE keyword, regardless of mesh cell size
 \end{itemize}
-%
-%\item {\it RECOVERY}
-%\begin{itemize}
-%	\item values: 1 float
-%	\item Implement global recovery of particles previously released into the cytoplasm. The current implementation assumes both the recovery pumping rate and the rate of pumping out of the cell are linear with the cytoplasmic calcium concentration. \comment{Eventually should implement saturation to a max rate, but will need to explicitly keep track of cytoplasmic calcium over time}
-%	\item In order, the values are: 
-%	\begin{itemize} 
-%		\item RECOVERFROM: initial release just before time 0, expressed as a drop in global network free calcium (or single particle) concentration. For default 1D sims, this is given in units of $\text{mM}*\pi r^2$ where $r$ is the tube radius.
-%		\item KREC: rate constant for recovery (per ER membrane area). 
-%		Suppose $\hat{k}_\text{rec}$ is the rate constant per ER membrane area for pumping from the cytoplasm back into the ER (in units of $\text{s}^{-1} \text{mM}^{-1} \mu\text{m}^{-2}$), so that the current being pumped in is $I = \hat{k}_\text{rec} c_\text{cyto}$. For 1D sims, the value for KREC (in units of $\text{s}^-1 \mu\text{m}^{-1} $) should be input as $\text{KREC} = \hat{k}_\text{rec} (2\pi r)/V_\text{cyto}$	
-%		\item KOUT: rate constant for pumping cytoplasmic calcium out of the cell. 
-%		Suppose $\hat{k}_\text{out}$ is the rate constant for pumping from the cytoplasm out of the cell (in units of $\text{s}^{-1} \text{mM}^{-1}$). The value of KOUT (in units of $\text{s}^-1$) should be input as $\text{KREC} = \hat{k}_\text{out}/V_\text{cyto}$		
-%	\end{itemize}	
-%\end{itemize}
-%
+
 \item {\it RNGSEED}
   \begin{itemize}
     \item 1 integer; default: 0
@@ -404,6 +390,22 @@ By default, the simulations work with concentrations in units of $mM \times \pi 
 	\item Snapshot file contains multiple snapshots of concentration profiles on all the mesh elements. Should be read with \verb=loadSnapshotFVM.m= script
 \end{itemize}
 %
+\item {\it STARTNODES}
+\begin{itemize}
+	\item 1 or more optional integers
+	\item List of nodes to be used for initializing concentrations.
+	\item If STARTCONC is positive, then the concentration in the mesh cell at each node is set to STARTCONC. Otherwise, they are set in proportion to mesh cell volume, integrating to a total of $1$.
+	\item The nodes listed cannot have degree 1 (since those do not get their own mesh cells)
+	\item Use STARTNODERAD to initialize particles in all mesh cells within a spatial radius. 
+\end{itemize}
+%
+\item {\it STARTPOS}
+\begin{itemize}
+	\item 2 or 3 floats (number equals dimension of spatial embedding)
+	\item Initialize particles in all mesh cells within some radius (STARTNODERAD) of a spatial position
+	\item {\color{red} Warning:} the Fortran code does not know about the spatial embedding of curved edges and treats all edges as emanating straight out from a node. This can effect which mesh cells fall in range of the starting position.
+\end{itemize}
+%
 \item {\it UNIFORMBUFFER}
 \begin{itemize}
 	\item  value: 1 optional logical; default false
@@ -414,7 +416,7 @@ By default, the simulations work with concentrations in units of $mM \times \pi 
 \begin{itemize}
 	\item value: 1 optional logical; default true if keyword is present, false otherwise
 	\item If this is set to true, then each mesh cell is assigned a radius that may vary along or between edges and affects flux from one mesh cell to another. 
-	\item Control how edge radii are assigned with EDGERADBASE, EDGERADRAND
+	\item Control how edge radii are assigned with EDGERADBASE, EDGERADRAND, EDGERADVAR
 \end{itemize}
 %
 \item {\it VERBOSE}

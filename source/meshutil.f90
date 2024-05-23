@@ -373,10 +373,10 @@ CONTAINS
     IF (PRESENT(RESVP)) THEN
        ! reservoirs are defined in separate data structures
        NCELLTOT = SUM(NETP%EDGENCELL) + NINTNODES + RESVP%NRESV
-       MAXDEG = MAX(MAXVAL(NETP%NODEDEG),MAXVAL(NETP%RESVNNODE),MAXVAL(RESVP%RESVDEG))
+       MAXDEG = MAX(MAXVAL(NETP%NODEDEG),MAXVAL(NETP%RESVNNODE),MAXVAL(RESVP%RESVDEG),2)
     ELSE  
        NCELLTOT = SUM(NETP%EDGENCELL) + NINTNODES + NETP%NRESV
-       MAXDEG = MAX(MAXVAL(NETP%NODEDEG),MAXVAL(NETP%RESVNNODE))
+       MAXDEG = MAX(MAXVAL(NETP%NODEDEG),MAXVAL(NETP%RESVNNODE),2)
     ENDIF
 
     IF (USEGLOBALRESV) NCELLTOT = NCELLTOT+1
@@ -732,7 +732,7 @@ CONTAINS
 
     ! set mesh radii
     CALL SETMESHRADII(MESHP,NETP,EDGERADVARTYPE,EDGERADVARPARAMS)        
-    CALL SETMESHBOUNDAREAS(MESHP,NETP)
+    CALL SETMESHBOUNDAREAS(MESHP)
     
     ! set up to work with 3D concentrations
     IF (CONC3D) THEN
@@ -1050,8 +1050,46 @@ CONTAINS
        
   END SUBROUTINE SETMESHRADIIFROMEDGES
 
-  SUBROUTINE SETMESHBOUNDAREAS(MESHP,NETP)
+  SUBROUTINE SETMESHBOUNDAREAS(MESHP)
     ! set areas of boundaries between mesh elements
+    ! based on average of the adjacent mesh cells cross-sectional areas
+    ! assumes radii of mesh cells have been predefined
+    ! ignores boundaries between two reservoir elements
+    ! (these should be set in RESERVOIRSTOMESH)
+
+    IMPLICIT NONE
+    TYPE(MESH), POINTER :: MESHP
+
+    INTEGER :: CC, BC, CC2
+
+    MESHP%BOUNDAREA = 0D0
+    
+    DO CC = 1,MESHP%NCELL
+       DO BC = 1,MESHP%DEG(CC)
+          CC2 = MESHP%BOUNDS(CC,BC)
+
+          IF (CC2.EQ.0) THEN ! dead end
+             ! use radius of current element only
+             MESHP%BOUNDAREA(CC,BC) = PI*MESHP%RAD(CC)**2          
+          ELSEIF (MESHP%CELLTYPE(CC).GE.2.AND.MESHP%CELLTYPE(CC2).LT.2) THEN
+             ! just use the radius of the non-reservoir element
+             MESHP%BOUNDAREA(CC,BC) = PI*MESHP%RAD(CC2)**2
+          ELSEIF (MESHP%CELLTYPE(CC).LT.2.AND.MESHP%CELLTYPE(CC2).GE.2) THEN
+             MESHP%BOUNDAREA(CC,BC) = PI*MESHP%RAD(CC)**2
+          ELSEIF (MESHP%CELLTYPE(CC).GE.2.AND.MESHP%CELLTYPE(CC2).GE.2) THEN
+             CYCLE ! ignore boundaries between two connected reservoirs
+          ELSE
+             ! connection between two node or edge cells, take the average area
+             MESHP%BOUNDAREA(CC,BC) = PI*(MESHP%RAD(CC)**2 + MESHP%RAD(CC2)**2)/2
+          ENDIF
+       END DO
+    END DO
+    
+  END SUBROUTINE SETMESHBOUNDAREAS
+  
+  SUBROUTINE SETMESHBOUNDAREAS_network(MESHP,NETP)
+    ! set areas of boundaries between mesh elements
+    ! Uses radius of the network edge the cell is on.
     ! assumes radii of edge cells have been predefined
     ! ignores boundaries between two reservoir elements
     ! (these should be set in RESERVOIRSTOMESH)
@@ -1123,7 +1161,7 @@ CONTAINS
     ENDDO
     
     
-  END SUBROUTINE SETMESHBOUNDAREAS
+  END SUBROUTINE SETMESHBOUNDAREAS_NETWORK
 
   SUBROUTINE UPDATEMESH3D(MESHP)
     ! update node and edge cells on mesh to deal with 3D concentrations
