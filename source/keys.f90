@@ -85,8 +85,7 @@ MODULE KEYS
   DOUBLE PRECISION :: FIXVALS(MAXNABSORBER,MAXNFIELD)
   DOUBLE PRECISION :: FIXNEARNODEDIST
   DOUBLE PRECISION :: FIXRECTANGLE(MAXNFIELD,5)
-  LOGICAL :: RANDFIXNODES, RANDFIXCELLS, RANDFIXRESV
-  LOGICAL :: TRACKFIXNODEFLUX ! track flux out of fixed nodes rather than absorber nodes
+  LOGICAL :: RANDFIXNODES, RANDFIXCELLS, RANDFIXRESV  
   ! determine fixed nodes from the network file
   LOGICAL :: FIXNODEFROMNETFILE
   ! how many of the marked nodes in the file should actually get fixed?
@@ -162,9 +161,11 @@ MODULE KEYS
   INTEGER :: FIXEDGEVEL(MAXFIXEDGEVEL)
   DOUBLE PRECISION :: FIXEDGEVELVAL(MAXFIXEDGEVEL)
 
-  ! keep track of radius along mesh elements
-  ! otherwise assume constant radius for all
-  LOGICAL :: USEVARRAD
+  ! varying radii along edge (if >0)
+  ! integer value sets what correction factor to use for diffusivities
+  INTEGER :: VARRAD
+  ! try to read radii from file?
+  LOGICAL :: READVARRAD
   ! randomizing radii along edges
   ! or setting varying radii along each edge
   CHARACTER(LEN=100) :: EDGERADRANDTYPE, EDGERADVARTYPE

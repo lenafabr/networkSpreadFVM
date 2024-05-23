@@ -18,7 +18,7 @@ CONTAINS
     ! VELCONTROL: string setting how velocities on edges are controlled
     
     USE KEYS, ONLY : OUTFILE, SNAPSHOTFILE, OUTPUTEVERY, PRINTEVERY, &
-         & SNAPSHOTEVERY, TRACKFIXNODEFLUX, VERBOSE, DOFLOW, CONTFILE, &
+         & SNAPSHOTEVERY,  VERBOSE, DOFLOW, CONTFILE, &
          & OUTPUTEVERYSWITCH, OUTPUTEVERYSTART, TRACKFLUXPERM, OUTPUTTOTFLUXONLY, &
          & LOGSNAPSHOT, NSNAPSHOT,OUTPUT1FIELD      
     !USE mt19937, ONLY : GRND
@@ -228,12 +228,12 @@ CONTAINS
                    WRITE(OU,*) FC, pack(FLUX(:,FC),DSP%ISPERM), PACK(DSP%PERM(:,FC),DSP%ISPERM)
                 ENDDO
              ENDIF
-          ELSE
+          ELSE             
              WRITE(OU,*) CURTIME, NFIELD, DELT, 0, NFIX(1:NFIELD)
 
              ! output flux out of fixed cells          
              DO FC = 1,NFIELD
-                IF (OUTPUTTOTFLUXONLY) THEN
+                IF (OUTPUTTOTFLUXONLY) THEN                   
                    ! flux out of all nodes together
                    WRITE(OU,*) FC, SUM(FLUX(FIXCELLS(1:NFIX(FC),FC),FC))
                 ELSE
@@ -506,7 +506,7 @@ CONTAINS
     TYPE(MESH), POINTER :: MESHP
     INTEGER :: CC, DEG, FC, BC, BCt
     DOUBLE PRECISION :: WSHIFT(DSP%NFIELD), WAVG(DSP%NFIELD), FLUXADV(DSP%NFIELD)
-    DOUBLE PRECISION :: DFREE
+    DOUBLE PRECISION :: DFREE, ABOUND, DR, DSCL
 
     IF (DSP%MESHP%USEGLOBALRESV) THEN
        PRINT*, 'ERROR: non-equilibrated euler steps with global reservoir are not currently implemented.'
@@ -526,33 +526,62 @@ CONTAINS
        DO BCT = 1,DEG ! boundary counter
           BC = MESHP%BOUNDS(CC,BCT) ! boundary cell
           IF (BC.GT.0) THEN
-             ! flux across each boundary defined as
-             ! D*(w_(j+1)-w_j)/h+
-             FLUXDIFF = FLUXDIFF + DSP%DCOEFF*(DSP%FIELDS(BC,:) - DSP%FIELDS(CC,:))/MESHP%LENPM(CC,BCt)
+
+             IF (DSP%CONC3D) THEN
+                ! working with 3D concentrations
+                ! scaling factor for diffusivity
+                ! Only for boundaries between node and/or edge
+                IF (DSP%VARRAD.EQ.1.AND.MESHP%CELLTYPE(CC).LT.2.AND.MESHP%CELLTYPE(BC).LT.2) THEN
+                   DR = MESHP%RAD(BC)-MESHP%RAD(CC)
+                   ! This is formula 1.8 in Berezhkovskii, 2007 (originally from Reguerra, 2001)
+                   DSCL = SQRT(1 + (DR/MESHP%LENPM(CC,BCT))**2)
+                ELSE
+                   DSCL = 1D0
+                ENDIF
+                
+                ! area of cell boundary
+                ABOUND = MESHP%BOUNDAREA(CC,BCT)
+
+                ! This is formula 1.6 from Berezhkovskii, 2007 (where FIELDS is c/A, the 3D concentration)
+                FLUXDIFF = FLUXDIFF + DSP%DCOEFF/DSCL*ABOUND &
+                     & *(DSP%FIELDS(BC,:) - DSP%FIELDS(CC,:))/MESHP%LENPM(CC,BCt) 
+                                    
+             ELSE
+                ! flux across each boundary defined as
+                ! D*(w_(j+1)-w_j)/h+
+                FLUXDIFF = FLUXDIFF + DSP%DCOEFF*(DSP%FIELDS(BC,:) - DSP%FIELDS(CC,:))/MESHP%LENPM(CC,BCt)
+             ENDIF
           ENDIF
        ENDDO
 
        ! Advective flux: via Lax-Wendroff discretization
        FLUXADV = 0D0
-       DO BCT = 1,DEG
-          ! approximate field values on boundary after half a timestep
-          ! positive bounddir means + velocities point out from this cell
-          BC = MESHP%BOUNDS(CC,BCT) ! boundary cell
-
-          IF (BC.GT.0) THEN
-             ! Weighted average of field on boundary
-             
-             WAVG = (MESHP%LEN(BC)/MESHP%DEG(BC)*DSP%FIELDS(CC,:) &
-                  & + MESHP%LEN(CC)/MESHP%DEG(CC)*DSP%FIELDS(BC,:))/MESHP%LENPM(CC,BCT)
-             WSHIFT = WAVG - DELT/2/MESHP%LENPM(CC,BCT)*DSP%VEL(CC,BCT)*MESHP%BOUNDDIR(CC,BCT)*(DSP%FIELDS(BC,:) - DSP%FIELDS(CC,:))
-             
-!             WSHIFT = DSP%FIELDS(CC,:) + &
-!                  & 0.5*(1-MESHP%BOUNDDIR(CC,BCT)*DSP%VEL(CC,BCT)&
-             !                  & *DELT/MESHP%LENPM(CC,BCT))*(DSP%FIELDS(BC,:) - DSP%FIELDS(CC,:))
-             
-             FLUXADV = FLUXADV - MESHP%BOUNDDIR(CC,BCT)*DSP%VEL(CC,BCT)*WSHIFT
+       IF (DSP%USEEDGEFLOW) THEN
+          IF (DSP%CONC3D) THEN
+             PRINT*, 'CONC3D not set up together with edge flows'
+             STOP 1
           ENDIF
-       ENDDO
+          DO BCT = 1,DEG
+             ! approximate field values on boundary after half a timestep
+             ! positive bounddir means + velocities point out from this cell
+             BC = MESHP%BOUNDS(CC,BCT) ! boundary cell
+
+             IF (BC.GT.0) THEN
+                ! Weighted average of field on boundary
+
+                WAVG = (MESHP%LEN(BC)/MESHP%DEG(BC)*DSP%FIELDS(CC,:) &
+                     & + MESHP%LEN(CC)/MESHP%DEG(CC)*DSP%FIELDS(BC,:))/MESHP%LENPM(CC,BCT)
+                WSHIFT = WAVG - DELT/2/MESHP%LENPM(CC,BCT)*DSP%VEL(CC,BCT)*MESHP%BOUNDDIR(CC,BCT)&
+                     & *(DSP%FIELDS(BC,:) - DSP%FIELDS(CC,:))
+
+                !             WSHIFT = DSP%FIELDS(CC,:) + &
+                !                  & 0.5*(1-MESHP%BOUNDDIR(CC,BCT)*DSP%VEL(CC,BCT)&
+                !                  & *DELT/MESHP%LENPM(CC,BCT))*(DSP%FIELDS(BC,:) - DSP%FIELDS(CC,:))
+
+                FLUXADV = FLUXADV - MESHP%BOUNDDIR(CC,BCT)*DSP%VEL(CC,BCT)*WSHIFT
+             ENDIF
+          ENDDO
+       ENDIF
 
        ! Turn off advective and diffusive flux for non-mobile fields
        DO FC = 1,DSP%NFIELD
@@ -680,10 +709,10 @@ CONTAINS
              IF (MESHP%BOUNDCLOSED(CC,BCT)) CYCLE ! this boundary is closed off
 
              IF (DSP%CONC3D) THEN
-                ! using meshed reservoir elements, work entirely with 3D concentrations
+                ! working with 3D concentrations
                 ! scaling factor for diffusivity
-                ! Only for boundaries along an edge, only if using varrad
-                IF (DSP%VARRAD.AND.MESHP%CELLTYPE(CC).EQ.1.AND.MESHP%CELLTYPE(BC).EQ.1) THEN
+                ! Only for boundaries between node and/or edge
+                IF (DSP%VARRAD.EQ.1.AND.MESHP%CELLTYPE(CC).LT.2.AND.MESHP%CELLTYPE(BC).LT.2) THEN
                    DR = MESHP%RAD(BC)-MESHP%RAD(CC)
                    ! This is formula 1.8 in Berezhkovskii, 2007 (originally from Reguerra, 2001)
                    DSCL = SQRT(1 + (DR/MESHP%LENPM(CC,BCT))**2)
@@ -694,6 +723,7 @@ CONTAINS
                 ! area of cell boundary
                 ABOUND = MESHP%BOUNDAREA(CC,BCT)
 
+!                PRINT*, 'TESTX1:', DSCL, ABOUND
                 ! flux for total ligand
                 ! This is formula 1.6 from Berezhkovskii, 2007 (where FIELDS is c/A, the 3D concentration)
                 FLUXDIFF(1) = FLUXDIFF(1) &
@@ -706,33 +736,9 @@ CONTAINS
                    FLUXDIFF(2) = FLUXDIFF(2) + &
                         & DSP%DCOEFF(2)/DSCL*ABOUND*&
                         & (DSP%FIELDS(BC,2) - DSP%FIELDS(CC,2))/MESHP%LENPM(CC,BCT)
-                ENDIF
-             ELSEIF (DSP%VARRAD) THEN
-                ! mesh cells can have varying radii
-                ! but still working with 1D concentrations
-                ! flux across boundary = D(x) A(x) d/dx[C/A]
-                ! D(x) = D0/sqrt(1+R'^2)
-
-                ! scaling factor for diffusivity
-                DR = MESHP%RAD(BC)-MESHP%RAD(CC)
-                DSCL = SQRT(1 + (DR/MESHP%LENPM(CC,BCT))**2)
-                ! areas in the two membrane cell, and average at boundary
-                A1 = PI*MESHP%RAD(BC)**2; A2 = PI*MESHP%RAD(CC)**2
-                ABOUND = PI*((MESHP%RAD(BC)+MESHP%RAD(CC))/2)**2
-                !ABOUND = MESHP%BOUNDAREA(CC,BCT)
-
-                ! flux for total ligand
-                FLUXDIFF(1) = FLUXDIFF(1) &
-                     & + DSP%DCOEFF(1)/DSCL*ABOUND*(DSP%FIELDS(BC,1)/A1 &
-                     & - DSP%FIELDS(CC,1)/A2)/MESHP%LENPM(CC,BCt) &
-                     & + DSP%DCOEFF(2)/DSCL*ABOUND*(BFIELD(BC)/A1 - BFIELD(CC)/A2)/MESHP%LENPM(CC,BCT)
-                IF (.NOT.DSP%UNIFORMBUFFER) THEN ! spatially varying buffer conc
-                   ! flux for total protein
-                   FLUXDIFF(2) = FLUXDIFF(2) + &
-                        & DSP%DCOEFF(2)/DSCL*ABOUND*&
-                        & (DSP%FIELDS(BC,2)/A1 - DSP%FIELDS(CC,2)/A2)/MESHP%LENPM(CC,BCT)
-                ENDIF
+                ENDIF             
              ELSE
+                ! 1D concentrations with constant tubule radii across whole network
                 ! flux across each boundary defined as
                 ! D*(w_(j+1)-w_j)/h+
                 ! get diffusive flux of TOTAL LIGAND
@@ -752,8 +758,8 @@ CONTAINS
        ! WARNING: flows are not set up with reservoir elements or with varrad
        FLUXADV = 0D0
        IF (DSP%USEEDGEFLOW) THEN
-          IF (DSP%VARRAD.OR.DSP%CONC3D) THEN
-             PRINT*, 'USEVARRAD AND CONC3D not set up together with edge flows'
+          IF (DSP%CONC3D) THEN
+             PRINT*, 'CONC3D not set up together with edge flows'
              STOP 1
           ENDIF
           

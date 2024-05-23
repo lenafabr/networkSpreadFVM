@@ -50,7 +50,7 @@ for sc =1%:nsnap
 end
 hold off
 
-%% plot concentration profiles
+%% plot (3D) concentration profiles
 % sort mesh cells by position
 [xplot,sortind] = sort(MSH.pos(:,1));
 meshvol = MSH.len.*MSH.rad'.^2*pi;
@@ -58,12 +58,16 @@ meshvol = MSH.len.*MSH.rad'.^2*pi;
 fieldplot = squeeze(field(sortind,1,2:2:50));
 cmap = jet(size(fieldplot,2));
 
-%plot(xplot,fieldplot,'.-')
-plot(xplot,fieldplot./MSH.rad(sortind)'.^2/pi,'.-')
+% 3D concentrations, do not need to be scaled by area to be flat at
+% steady-state
+plot(xplot,fieldplot,'--')
+%plot(xplot,fieldplot./MSH.rad(sortind)'.^2/pi,'.-')
 colororder(cmap)
 
+xlabel('position')
+ylabel('3D conc, mM')
 %% load concs and check total concentration over time
-snapfile = [resdir 'testreleaseLin.snap.txt'];
+snapfile = [resdir 'testreleaseLinNoBufEq.snap.txt'];
 [field,snaptimes,vels] = loadSnapshotFVM(snapfile);
 nsnap = length(snaptimes)
 
@@ -103,7 +107,7 @@ legend off
 
 %% load snapshot data
 resdir = '../testing/';
-runname = 'testspreadCone'
+runname = 'testreleaseLinNoBuf'
 filename = [resdir runname '.mesh.txt'];
 MSH = MeshObj(filename);
 
@@ -135,12 +139,12 @@ xlabel('time (sec)')
 ylabel('cumulative released (ions)')
 
 %% explicitly 3D concentrations
-runname = 'testreleaseLin3D'
+runname = 'testreleaseLin3DnoBufEq'
 %% load and plot flux over time
 
 [flux,tvals,cumflux,tavg] = loadTotFluxSim([resdir runname '.out']);    
 
-plot(tvals,flux,'.-')
+plot(tvals,flux*mMum,'.-')
 xlabel('time (sec)')
 ylabel('flux (ions per sec)')
 

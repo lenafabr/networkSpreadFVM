@@ -250,6 +250,25 @@ By default, the simulations work with concentrations in units of $mM \times \pi 
 	\end{itemize}
 \end{itemize}
 %
+\item {\it FIXNODE}
+\begin{itemize}
+	\item 2 integers, 1 float. No defaults
+	\item Values are: (1) which field is fixed, (2) which node to fix the field on, (3) what value to fix it to
+	\item Can have many of these lines to fix multiple nodes
+	\item if the node is a terminal node, instead fix the concentration in the edge mesh cell that abuts it
+	\item Use FIXNODEFROMNETFILE to instead label the fixed nodes in the network file
+\end{itemize}
+%
+\item {\it FIXNODEFROMNETFILE}
+\begin{itemize}
+	\item 1 optional logical; default: F if keyword not used, T if keyword used by itself
+	\item Read in node labels from net file to determine which nodes are fixed 
+	\item Nodes labeled as FO will definitely be fixed. Those labeled as F may be fixed if FIXSUBSETNODES is used.
+	\item This overwrites any nodes set by FIXNODE in the parameter file. 
+	\item Assumes only field 1 is fixed
+	\item Sets the fixed value to whatever value is given in the (first) FIXNODE line in the parameter file
+\end{itemize}
+%
 \item {\it GLOBALRESERVOIR}
 \begin{itemize}
 	\item values: 5 floats, 1 logical; defaults: -, -, -, -, -, F
@@ -390,6 +409,13 @@ By default, the simulations work with concentrations in units of $mM \times \pi 
 	\item Snapshot file contains multiple snapshots of concentration profiles on all the mesh elements. Should be read with \verb=loadSnapshotFVM.m= script
 \end{itemize}
 %
+\item {\it STARTCONC}
+\begin{itemize}
+	\item 1 or more floats; default: 1D0
+	\item Starting concentrations for each field 
+	\item If $<0$, then set starting concentrations as defined by STARTNODES such that the total initial mass of each field is 1.
+\end{itemize}
+%
 \item {\it STARTNODES}
 \begin{itemize}
 	\item 1 or more optional integers
@@ -412,11 +438,14 @@ By default, the simulations work with concentrations in units of $mM \times \pi 
 	\item Assume the concentration of total buffer sites is uniform in space. This is true if there are no flows and  no leakage of buffer
 \end{itemize}
 %
-\item {\it USEVARRAD}
+\item {\it VARRAD}
 \begin{itemize}
-	\item value: 1 optional logical; default true if keyword is present, false otherwise
-	\item If this is set to true, then each mesh cell is assigned a radius that may vary along or between edges and affects flux from one mesh cell to another. 
-	\item Control how edge radii are assigned with EDGERADBASE, EDGERADRAND, EDGERADVAR
+	\item value: 1 integer, 1 optional logical; integer default: 1 if using EDGERADVAR, 0 otherwise; logical default F if VARRAD keyword not provided, T if provided without the logical
+	\item Correction factor $f_D = D(x)/D_0$ for diffusivities along tubes with varying radii
+	\item Value 0: $f_D = 1$ (no correction)
+	\item Value 1: $f_D = 1/\sqrt{1 + R'(x)^2}$ (from Berezhkovskii, 2007, Eq 1.8, or Reguerra, 2001)
+	\item The correction factor is applied across any boundary that does not involve a reservoir on either side
+	\item Logical controls whether to read some radii directly from the network file (radii not provided are set to EDGERADBASE). 
 \end{itemize}
 %
 \item {\it VERBOSE}

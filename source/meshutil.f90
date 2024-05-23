@@ -465,7 +465,7 @@ CONTAINS
     ! set up cells on edges
     ! -----------
     DO EC = 1,NETP%NEDGE       
-       N1 = NETP%EDGENODE(EC,1); N2 = NETP%EDGENODE(EC,2)
+       N1 = NETP%EDGENODE(EC,1); N2 = NETP%EDGENODE(EC,2)       
        
        DO CC = 1,NETP%EDGENCELL(EC)
 
@@ -475,6 +475,7 @@ CONTAINS
           MESHP%EDGEPOS(CT) = (CX1+((CC-1) + 0.5D0)*EDGECELLLEN(EC)) ! position along the edge
           MESHP%POS(CT,:) =  NETP%NODEPOS(N1,:) + &
                & MESHP%EDGEPOS(CT)*NETP%EDGEDIR(EC,:) ! Position in 3D space
+         
           MESHP%LEN(CT) = EDGECELLLEN(EC)
           MESHP%VOL(CT) = MESHP%LEN(CT)
           MESHP%SA(CT) = MESHP%LEN(CT)
@@ -503,7 +504,7 @@ CONTAINS
                    MESHP%BOUNDS(CT,1) = 0
                   ! MESHP%DEG(CT) = 1
                 ENDIF
-                MESHP%TERMNODE(CT,1) = N1
+                MESHP%TERMNODE(CT,1) = N1                
              ELSE
                 ! connect to a node cell
                 MESHP%BOUNDS(CT,1) = NETP%NODECELLS(N1)
@@ -526,7 +527,7 @@ CONTAINS
                    MESHP%BOUNDS(CT,2) = 0
                   ! MESHP%DEG(CT) = 1
                 END IF
-                MESHP%TERMNODE(CT,2) = N2
+                MESHP%TERMNODE(CT,2) = N2                
              ELSE
                 ! connect to a node cell
                 MESHP%BOUNDS(CT,2) = NETP%NODECELLS(N2)
@@ -542,7 +543,6 @@ CONTAINS
        ENDDO
     ENDDO
 
-    PRINT*, 'TESTX1:', MESHP%USEGLOBALRESV
     IF (MESHP%USEGLOBALRESV) CT = CT+1
    
     IF (CT.NE.MESHP%NCELL) THEN
@@ -1080,7 +1080,8 @@ CONTAINS
              CYCLE ! ignore boundaries between two connected reservoirs
           ELSE
              ! connection between two node or edge cells, take the average area
-             MESHP%BOUNDAREA(CC,BC) = PI*(MESHP%RAD(CC)**2 + MESHP%RAD(CC2)**2)/2
+             ! this will give the correct boundary area if radius varies linearly
+             MESHP%BOUNDAREA(CC,BC) = PI*((MESHP%RAD(CC) + MESHP%RAD(CC2))/2)**2
           ENDIF
        END DO
     END DO

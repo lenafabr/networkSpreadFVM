@@ -28,7 +28,7 @@ SUBROUTINE READKEY
   ! ---------------- temporary variables ---------------
   INTEGER :: DUMI, I, TMPI, DUMI1, DUMI2, DUMI3, rc, FC
   CHARACTER*100 :: DUMSTR
-  LOGICAL :: LDUM, CONTSEPSET
+  LOGICAL :: LDUM, CONTSEPSET, VARRADSET
   DOUBLE PRECISION :: TMP
   LOGICAL :: DOACTIVATION
 
@@ -211,9 +211,6 @@ SUBROUTINE READKEY
   ! warn when a field hits zero?
   WARNZEROFIELD=.FALSE.
 
-  ! output flux out of fixed nodes rather than absorber nodes
-  TRACKFIXNODEFLUX = .FALSE.
-
   ! fix all cells near the fixed nodes
   ! default is to fix the specified node cell only
   FIXNEARNODEDIST = -1
@@ -242,7 +239,11 @@ SUBROUTINE READKEY
   DEPRATE = 0D0
 
   ! allow for variable radii of mesh elements
-  USEVARRAD = .FALSE.
+  ! Correction factor for diffusivity
+  VARRAD = 0
+  VARRADSET = .FALSE.
+  READVARRAD = .FALSE.
+  
   ! parameters for randomizing edge radii
   EDGERADRANDTYPE = 'NONE'
   EDGERADRANDPARAMS = 0
@@ -769,11 +770,13 @@ SUBROUTINE READKEY
            ELSE
               USEPERMPREFACTOR = .TRUE.
            ENDIF
-        CASE('USEVARRAD')
-           IF (NITEMS.GT.1) THEN
-              CALL READO(USEVARRAD)
+        CASE('VARRAD')
+           CALL READI(VARRAD)
+           VARRADSET = .TRUE.
+           IF (NITEMS.GT.2) THEN
+              CALL READO(READVARRAD)
            ELSE
-              USEVARRAD = .TRUE.
+              READVARRAD = .TRUE.
            ENDIF
         CASE('VELCONTROL')
            CALL READA(VELCONTROL, CASESET=1)
@@ -820,6 +823,18 @@ SUBROUTINE READKEY
      ENDIF
      NFIELD = 2
   ENDIF
+
+
+  IF (EDGERADVARTYPE.NE.'CONSTANT'.AND..NOT.VARRADSET) THEN
+     ! Default correction factor for diffusivity
+     VARRAD = 1
+  END IF
+  
+  IF ((EDGERADVARTYPE.NE.'CONSTANT'.OR.EDGERADRANDTYPE.NE.'NONE'.OR.VARRAD.GT.0).AND..NOT.CONCENTRATIONS3D) THEN
+     PRINT*, 'ERROR IN PARAMETER CHOICE: must have CONCENTRATIONS3D set when working with varying radii'
+     STOP 1
+  ENDIF
+
   
   ! ----------- fix file names -----------
   CALL REPLACESUBSTR(OUTFILE,'*',TRIM(ADJUSTL(ARG)))
@@ -855,6 +870,9 @@ SUBROUTINE READKEY
   print*, 'Initiating Mersenne twister random number generator with seed:', SEED
   CALL SGRND(SEED)
 
+  
+
+  
   print*, '------------Parameter values : -------------------'
   print*, 'ACTION: ', TRIM(ADJUSTL(ACTION))
   print*, 'Output file: ', TRIM(OUTFILE)
@@ -894,11 +912,13 @@ SUBROUTINE READKEY
         PRINT*, 'Dumping snapshot every', SNAPSHOTEVERY,'steps. In file:', TRIM(ADJUSTL(SNAPSHOTFILE))
      ENDIF
   ENDIF
-  IF (USEVARRAD) THEN
-     PRINT*, 'Allowing for variable mesh cell radii'
+  IF (CONCENTRATIONS3D) THEN
+     PRINT*, 'Working with 3D concentrations'
   ENDIF
      PRINT*, 'EDGERADRAND: ', EDGERADRANDTYPE, EDGERADRANDPARAMS
-     PRINT*, 'EDGERADVAR: ', EDGERADVARTYPE, EDGERADVARPARAMS
+     PRINT*, 'EDGERADVAR: ', EDGERADVARTYPE, EDGERADVARPARAMS     
   print*, '----------------------------------------------------'
 
+  
+  
 END SUBROUTINE READKEY

@@ -43,8 +43,11 @@ MODULE DYNSYSUTIL
      ! arrays have been allocated
      LOGICAL :: ARRAYSET = .FALSE.
 
-     ! use varying radii for mesh elements
-     LOGICAL :: VARRAD = .FALSE.
+     ! if >0, use varying radii for mesh elements
+     ! integer value controls the correction factor for diffusivities
+     ! 0: no correction
+     ! 1: Eq 1.18 in Berezhkovskii 2007; from Reguerra, 2001
+     INTEGER :: VARRAD
      
      ! parameters have been set
      LOGICAL :: PARAMSET = .FALSE.
@@ -64,6 +67,8 @@ MODULE DYNSYSUTIL
      ! Include flows along edges?
      LOGICAL :: USEEDGEFLOW
      ! treat concentrations as 3D?
+     ! if true, will use the RAD field of the mesh to track
+     ! tubule radius
      LOGICAL :: CONC3D
 
      ! periodic global permeability
@@ -168,8 +173,13 @@ CONTAINS
           DSP%FIELDS(NETP%NODECELLS(STARTNODES),FC) = STARTCONC(FC)
        ELSE
           ! total volume of starting cells
-          TOTLEN = SUM(DSP%MESHP%LEN(NETP%NODECELLS(STARTNODES)))
-          DSP%FIELDS(NETP%NODECELLS(STARTNODES),FC) = DSP%MESHP%LEN(NETP%NODECELLS(STARTNODES))/TOTLEN
+          TOTLEN = SUM(DSP%MESHP%VOL(NETP%NODECELLS(STARTNODES)))
+          IF (DSP%CONC3D) THEN
+             DSP%FIELDS(NETP%NODECELLS(STARTNODES),FC) = 1D0/TOTLEN
+          ELSE
+             DSP%FIELDS(NETP%NODECELLS(STARTNODES),FC) = &
+                  & DSP%MESHP%VOL(NETP%NODECELLS(STARTNODES))/DSP%MESHP%LEN(NETP%NODECELLS(STARTNODES))/TOTLEN
+          ENDIF
        ENDIF
     ENDDO
 
@@ -220,7 +230,7 @@ CONTAINS
           DIST2 = SUM((DSP%MESHP%POS(CC,:) - STARTPOS(NC,:))**2)
           IF (DIST2.LT.RAD**2) THEN
              STARTCELLS(CC) = .TRUE.
-             TOTLEN = TOTLEN + DSP%MESHP%LEN(CC)
+             TOTLEN = TOTLEN + DSP%MESHP%VOL(CC)
           ENDIF
        ENDDO
     ENDDO
@@ -233,7 +243,13 @@ CONTAINS
           ENDDO
        ELSE
           DO CC = 1,DSP%MESHP%NCELL
-             IF (STARTCELLS(CC)) DSP%FIELDS(CC,FC) = DSP%MESHP%LEN(CC)/TOTLEN
+             IF (STARTCELLS(CC)) THEN
+                IF (DSP%CONC3D) THEN
+                   DSP%FIELDS(CC,FC) = 1D0/TOTLEN
+                ELSE
+                   DSP%FIELDS(CC,FC) = DSP%MESHP%VOL(CC)/DSP%MESHP%LEN(CC)/TOTLEN
+                ENDIF
+             ENDIF
           ENDDO        
        ENDIF
     ENDDO
@@ -414,7 +430,7 @@ CONTAINS
          & ACTNEARNODEDIST, DEPRATE, PERMNEARNODEDIST, FIXRECTANGLE, &
          & ALLOWFIXEDRESV, DORESERVOIRS, ALLOWRESVFIX, &
          & NFIXCELL, RANDFIXCELLS,FIXCELLS, RANDFIXPTS,FIXPTS,NFIXPT,FIXPTCENT,&
-         & FIXPTRAD, MAXNABSORBER, MAXNFIELD,NPERMPOS,PERMPOS,POSPERMEABILITY, USEVARRAD, &
+         & FIXPTRAD, MAXNABSORBER, MAXNFIELD,NPERMPOS,PERMPOS,POSPERMEABILITY,VARRAD, &
          & RANDFIXRESV, FIXPTMAXDIST, FIXPTEXCENT, FIXPTEXRAD, DOFLOW, USERESVELEMENTS, &
          & UNIFORMBUFFER, CONCENTRATIONS3D, PERIODGLOBALPERM, DURGLOBALPERM, &
          & USEGLOBALRESV,GLOBALRESVKR,GLOBALRESVKMR, GLOBALRESVKOUT, GLOBALRESVKMOUT, PERMTOGLOBALRESV, &
@@ -635,12 +651,11 @@ CONTAINS
        ELSEIF (MESHP%CELLTYPE(CC).EQ.1) THEN
           ! this is an edge cell
           ! if it hits a fixed terminal node, fix its value instead
-          ! value fixed to that of LAST fixed terminal node
+          ! value fixed to that of LAST fixed copy of this terminal node
           DO FC = 1,DSP%NFIELD
              DO CT= 1,MESHP%DEG(CC)
                 IF (MESHP%BOUNDS(CC,CT).EQ.0) THEN
                    NC = MESHP%TERMNODE(CC,CT)
-
                    DO CT2 = 1,NFIX(FC)
                       IF (FIXNODES(CT2,FC).EQ.NC) THEN                         
                          DSP%ISFIXED(CC,FC)=.TRUE.
@@ -879,7 +894,7 @@ CONTAINS
        ENDIF
     ENDDO
 
-    DSP%VARRAD = USEVARRAD
+    DSP%VARRAD = VARRAD
     DSP%USEEDGEFLOW = DOFLOW
 
     ! Treat concentrations as 3D if explicitly flagged, OR if working
