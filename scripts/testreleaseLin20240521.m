@@ -7,7 +7,7 @@ NT.setCumEdgeLen();
 
 %% load snapshot data
 resdir = '../testing/'; 
-runname = 'testspreadCone';
+runname = 'testspreadLinSin';
 filename = [resdir runname '.mesh.txt'];
 MSH = MeshObj(filename);
 
@@ -19,23 +19,24 @@ nsnap = length(snaptimes);
 showtime = 2; % time at which to show in sec
  [~,showsnap] = min(abs(snaptimes - showtime));
  Rabs = 0.25;
- tubeR = 0.05;
+ tubeR = MSH.rad*1;
  clf
-for sc =1%:nsnap
+for sc =100%:nsnap
     [sc nsnap]
     ind = find(MSH.resvind==0);    
     %intpos = interpolateMeshPos(MSH,NT);    
     %scatter(intpos(ind,1),intpos(ind,2),15,field(ind,1,sc)/0.007854,'filled')   
     %scatter(MSH.pos(ind,1),MSH.pos(ind,2),15,field(ind,1,sc)/0.007854,'filled')   
        
-    [X,Y,patchind] = meshPatches(MSH,NT,tubeR,tubeR);
-    C = field(patchind,1,sc)/(pi*tubeR^2); % colors
+    [X,Y,patchind] = meshPatches(MSH,NT,tubeR,0);
+    C = field(patchind,1,sc); % colors
+    %C = field(patchind,1,sc)/(pi*tubeR^2); % colors
     patch(X,Y,C);
     shading flat    
    
     colormap copper
         
-    caxis([0,0.5])
+    caxis([0,0.05])
 
     %title(sprintf('Snap %d time %f', sc, snaptimes(sc)))
     % title('WT region 1')    

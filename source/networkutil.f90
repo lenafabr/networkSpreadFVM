@@ -49,7 +49,9 @@ MODULE NETWORKUTIL
      INTEGER :: NLOOP, MAXLOOPLEN
      INTEGER, POINTER :: LOOPEDGES(:,:), LOOPLENS(:)
      ! radius of each network edge
-     DOUBLE PRECISION, POINTER :: EDGERAD(:)
+     ! and parameters for setting varying (eg: sinusoidal) radii
+     ! parameters are: min radius, amplitude, wavelength, phase (from middle of tube)
+     DOUBLE PRECISION, POINTER :: EDGERAD(:), EDGERADPARAMS(:,:)
      
      ! -------------
      ! Map nodes and edges to a mesh object     
@@ -330,23 +332,58 @@ CONTAINS
     ! Assign random value for the radius of each edge
     ! RANDTYPE = type of distribution to use
     ! PARAMS = parameters defining the distribution
-    ! Available districts:
+    ! Available options:
     ! UNIFORM
+    ! Select a single radius value for each edge, uniformly distributed
     !    params= [min, max]
-    USE GENUTIL,ONLY : GRND
+    ! SINUNIFORM
+    ! Edges will be sinusoidal, select uniformly distributed r_min, amplitude,
+    ! wavelength, phase
+    !    params = [min r_min, max r_min, min amp, max amp, min lambda, max lambda]
+    !    phase is uniformly selected between 0 and 2pi
+    USE GENUTIL,ONLY : GRND, PI
     IMPLICIT NONE
     TYPE(NETWORK), POINTER :: NETP
     CHARACTER(LEN=*) :: RANDTYPE
     DOUBLE PRECISION :: PARAMS(:)
     DOUBLE PRECISION :: U, MIN, MAX
-    INTEGER :: EC
+    INTEGER :: EC, PC
     
     SELECT CASE (RANDTYPE)
     CASE('UNIFORM')
+       ! uniform distribution of constant radii
        MIN = PARAMS(1); MAX = PARAMS(2)
        DO EC= 1,NETP%NEDGE
           U = GRND()
           NETP%EDGERAD(EC) = (MAX-MIN)*U+MIN
+
+          ! if treating as sinusoid, use 0 amplitude
+          NETP%EDGERADPARAMS(EC,:) = (/NETP%EDGERAD(EC),0D0,0D0,0D0/)
+       ENDDO
+
+    CASE('SINUNIFORM')
+       ! for sinusoidally varying radii, uniformly select minimum, amplitude, phase
+       DO PC = 1,4
+          IF (PC.EQ.4) THEN
+             ! range for selecting phase
+             MIN = 0D0
+             MAX = 2*PI
+          ELSE
+             ! range for selecting rminimum and amplitude
+             MIN = PARAMS(2*(PC-1)+1)
+             MAX = PARAMS(2*(PC-1)+2)
+          ENDIF
+
+          ! make random selections on each edge
+          DO EC= 1,NETP%NEDGE
+             U = GRND()
+             NETP%EDGERADPARAMS(EC,PC) = (MAX-MIN)*U+MIN          
+          ENDDO          
+       END DO
+
+       ! Set general network edge radius to the eq value of the sine
+       DO EC = 1,NETP%NEDGE
+          NETP%EDGERAD(EC) = NETP%EDGERADPARAMS(EC,1) + NETP%EDGERADPARAMS(EC,2)
        ENDDO
     CASE DEFAULT
        PRINT*, 'RANDTYPE for selecting edge radii is invalid:', RANDTYPE
@@ -807,7 +844,8 @@ CONTAINS
     
     ! allocate branch data
     ALLOCATE(NETP%EDGENODE(NEDGE,2), NETP%EDGESTART(NEDGE,DIM),&
-         & NETP%EDGEDIR(NEDGE,DIM), NETP%EDGELEN(NEDGE), NETP%EDGERAD(NEDGE))
+         & NETP%EDGEDIR(NEDGE,DIM), NETP%EDGELEN(NEDGE), NETP%EDGERAD(NEDGE), &
+         & NETP%EDGERADPARAMS(NEDGE,10))
     ! allocate loop data
     ALLOCATE(NETP%LOOPEDGES(NETP%NLOOP,MAXLOOPLEN), NETP%LOOPLENS(NETP%NLOOP))
     
@@ -894,7 +932,8 @@ CONTAINS
        DEALLOCATE(NETP%NODENODE, NETP%NODEEDGE, NETP%NODEPOS, NETP%NODELEN, &
             & NETP%NODEDEG, NETP%NODEABS,NETP%NODEWIDTH)
 !       DEALLOCATE(NETP%NODEFIX, NETP%NODEFIXVAL)
-       DEALLOCATE(NETP%EDGENODE, NETP%EDGESTART, NETP%EDGEDIR, NETP%EDGELEN,NETP%EDGERAD)
+       DEALLOCATE(NETP%EDGENODE, NETP%EDGESTART, NETP%EDGEDIR, &
+            & NETP%EDGELEN,NETP%EDGERAD, NETP%EDGERADPARAMS)
        DEALLOCATE(NETP%LOOPEDGES,NETP%LOOPLENS)
        DEALLOCATE(NETP%NODESTATE, NETP%NODEVOLS)
        IF (NETP%CONTSET) THEN

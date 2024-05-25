@@ -53,6 +53,6 @@ readkey.o: inputparams.o keys.o genutil.o mt19937.o
 genutil.o: mt19937.o
 networkutil.o: keys.o genutil.o
 meshutil.o: networkutil.o resvutil.o
-dynsysutil.o: meshutil.o keys.o
+dynsysutil.o: meshutil.o keys.o networkutil.o
 fvmdynamics.o: dynsysutil.o networkutil.o nodecontractutil.o keys.o
 nodecontractutil.o: meshutil.o dynsysutil.o networkutil.o flowutil.o

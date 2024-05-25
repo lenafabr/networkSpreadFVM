@@ -6,7 +6,7 @@ function [X,Y,patchind] = meshPatches(MSH,NT,radii,extend)
 % patchind gives the order of mesh indices for the patches
 % to get the right field values for the color
 
-% tubeR = is the half-width of the patch objects (tube radius)
+% radii = is the half-width of the patch objects (tube radius, *for each individual mesh cell*)
 % extend = extend all edges outward by this length
 
 if (~exist('extend','var'))
@@ -43,22 +43,26 @@ for ec = 1:NT.nedge
     [param,lens] = arclenparam(edgepath');
     
     startpos = interp1(NT.cumedgelen{ec},NT.edgepath{ec},startfrac*NT.cumedgelen{ec}(end));
-    endpos = interp1(NT.cumedgelen{ec},NT.edgepath{ec},endfrac*NT.cumedgelen{ec}(end));
-    
-    if (length(radii)>1)
-        tubeR = radii(ec);  
-    else
-        tubeR = radii;
-    end
+    endpos = interp1(NT.cumedgelen{ec},NT.edgepath{ec},endfrac*NT.cumedgelen{ec}(end));        
 
     % plot the edge mesh segments    
     for ic = 1:size(startpos,1)
+
+        % radius of mesh cell
+        if (length(radii)>1)
+            tubeR = radii(ic);  
+        else
+            tubeR = radii;
+        end
+
+
         % make rectangle
         dv = endpos(ic,:)-startpos(ic,:); dv = dv/norm(dv);
         pv = [-dv(2) dv(1)]; pv = pv/norm(pv);
         
         vert = [startpos(ic,:)+pv*tubeR-dv*extend; startpos(ic,:)-pv*tubeR-dv*extend; ...
             endpos(ic,:)-pv*tubeR+dv*extend; endpos(ic,:)+pv*tubeR+dv*extend];
+        
         
         X(:,end+1) = vert(:,1);
         Y(:,end+1) = vert(:,2);    

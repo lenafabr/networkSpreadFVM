@@ -236,6 +236,7 @@ By default, the simulations work with concentrations in units of $mM \times \pi 
 	\begin{itemize}
 		\item `None': do not use random radii. Instead read in radii from the network file, or use \verb=EDGERADBASE= by default if no value provided in network file.
 		\item `Uniform': uniformly select radius for each edge between some minimum and maximum value (2 parameters provided as floats).
+		\item 'Sinuniform': for edges that vary sinusoidally (set with EDGERADVAR), randomly select the parameters of the sinusoid. Parameters are: min $r_\text{min}$, max $r_\text{min}$, min amplitude, max amplitude, min wavelength, max wavelength. Phase (away from middle of tube) is selected uniformly. 
 	\end{itemize}
 \end{itemize}
 %
@@ -247,6 +248,7 @@ By default, the simulations work with concentrations in units of $mM \times \pi 
 	\begin{itemize}
 		\item `constant': Use a constant radius. 1 parameter: radius value. If parameter is not supplied, instead read in radii from the network file, or use \verb=EDGERADBASE= by default if no value provided in network file.
 		\item 'linear': Radius varies linearly along each edge. 2 parameters: initial radius and final radius.
+		\item 'sinusoidal': Use a sinusoidal function for the radius, with local minimum in the middle of each tubule. Parameters are: minimal radius, amplitude, wavelength
 	\end{itemize}
 \end{itemize}
 %
@@ -420,7 +422,7 @@ By default, the simulations work with concentrations in units of $mM \times \pi 
 \begin{itemize}
 	\item 1 or more optional integers
 	\item List of nodes to be used for initializing concentrations.
-	\item If STARTCONC is positive, then the concentration in the mesh cell at each node is set to STARTCONC. Otherwise, they are set in proportion to mesh cell volume, integrating to a total of $1$.
+	\item If STARTCONC is positive, then the concentration in the mesh cell at each node is set to STARTCONC. Otherwise, they are set to all have the same 3D concentration, integrating to a total of $1$.
 	\item The nodes listed cannot have degree 1 (since those do not get their own mesh cells)
 	\item Use STARTNODERAD to initialize particles in all mesh cells within a spatial radius. 
 \end{itemize}

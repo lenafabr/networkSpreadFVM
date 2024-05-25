@@ -464,7 +464,7 @@ SUBROUTINE READKEY
            CALL READF(FIXNEARNODEDIST)
         CASE('FIXNODE')
            CALL READI(FC) ! which field is this for
-           NFIX(FC) = NFIX(FC) + 1
+           NFIX(FC) = NFIX(FC) + 1 
            IF (NFIX(FC).GT.MAXNABSORBER) THEN
               PRINT*, 'ERROR IN READKEY: too many fixed nodes', NFIX, MAXNABSORBER
               STOP 1

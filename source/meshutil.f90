@@ -24,7 +24,7 @@ MODULE MESHUTIL
      ! for reservoir is specified directly in terms of SA = (surface area)/(2*pi*a)
      ! LENPM: length to the center of each adjacent cell (h_plus, h_minus in the math notes motation)
      ! RAD: radius for each mesh cell
-     ! NOTE: radius is only used if USEVARRAD keyword is on and CONCENTRATIONS3D keyword is off
+     ! NOTE: radius is only used if  CONCENTRATIONS3D keyword is off
      DOUBLE PRECISION, POINTER :: POS(:,:), LEN(:), LENPM(:,:), VOL(:)
      DOUBLE PRECISION, POINTER :: SA(:), RAD(:)
      ! number of neighbors for each cell
@@ -233,7 +233,8 @@ CONTAINS
   END SUBROUTINE CLOSEBOUNDSOLD
   
   SUBROUTINE SETUPNETWORKMESH(MESHP,NETP,MAXCELLLEN,MINNCELL,CONC3D,&
-       & USEGLOBALRESV,GLOBALRESVOL,EDGERADVARTYPE,EDGERADVARPARAMS,RESVP)
+       & USEGLOBALRESV,GLOBALRESVOL,EDGERADVARTYPE,EDGERADVARPARAMS,&
+       & EDGERADRANDTYPE,RESVP)
     IMPLICIT NONE
     ! using a network object, set up a mesh on it for FVM simulations
     ! * CELL-CENTERED mesh. Same distance from cell position to each boundary *
@@ -256,7 +257,7 @@ CONTAINS
     INTEGER, INTENT(IN) :: MINNCELL
     logical, INTENT(IN) :: CONC3D, USEGLOBALRESV
     DOUBLE PRECISION, INTENT(IN) :: GLOBALRESVOL, EDGERADVARPARAMS(:)
-    CHARACTER(LEN=*), INTENT(IN) :: EDGERADVARTYPE
+    CHARACTER(LEN=*), INTENT(IN) :: EDGERADVARTYPE, EDGERADRANDTYPE
     
     INTEGER :: EC, NC, CC, CT, N1, N2, D1, D2, BC, RC, bct, CCT
     INTEGER :: NCELL
@@ -731,7 +732,7 @@ CONTAINS
     !MESHP%RAD = SQRT(1D0/PI)
 
     ! set mesh radii
-    CALL SETMESHRADII(MESHP,NETP,EDGERADVARTYPE,EDGERADVARPARAMS)        
+    CALL SETMESHRADII(MESHP,NETP,EDGERADVARTYPE,EDGERADVARPARAMS,EDGERADRANDTYPE)        
     CALL SETMESHBOUNDAREAS(MESHP)
     
     ! set up to work with 3D concentrations
@@ -794,6 +795,7 @@ CONTAINS
        ENDDO
     ENDDO
 
+    PRINT*, 'Total mesh elements:', MESHP%NCELL
     
   END SUBROUTINE SETUPNETWORKMESH  
 
@@ -925,15 +927,16 @@ CONTAINS
   END SUBROUTINE RESERVOIRSTOMESH
 
 
-  SUBROUTINE SETMESHRADII(MESHP,NETP,EDGERADVARTYPE,EDGERADVARPARAMS)
+  SUBROUTINE SETMESHRADII(MESHP,NETP,EDGERADVARTYPE,EDGERADVARPARAMS,RANDTYPE)
     ! set radii for each mesh cell (could be variable or constant, copied from NETP)
+    USE GENUTIL, ONLY : PI
     IMPLICIT NONE
     TYPE(MESH), POINTER :: MESHP
     TYPE(NETWORK), POINTER :: NETP
-    CHARACTER(LEN=*) :: EDGERADVARTYPE
-    DOUBLE PRECISION :: EDGERADVARPARAMS(:)
+    CHARACTER(LEN=*), INTENT(IN) :: EDGERADVARTYPE, RANDTYPE
+    DOUBLE PRECISION, INTENT(IN) :: EDGERADVARPARAMS(:)
     INTEGER :: CC, EC, BCC, BC, MC
-    DOUBLE PRECISION :: R1, R2, TOTRAD
+    DOUBLE PRECISION :: R1, R2, TOTRAD, AMP, LAM, PHI, RMIN
     
     ! Default radii: note that this is never used for reservoirs with no connected nodes
     MESHP%RAD = 0D0
@@ -944,8 +947,8 @@ CONTAINS
        CALL SETMESHRADIIFROMEDGES(MESHP,NETP)
     CASE('LINEAR')
        ! linearly increasing radii along each edge
+       ! parameters are starting and ending radii
 
-       ! starting and ending radii
        R1 = EDGERADVARPARAMS(1); R2 = EDGERADVARPARAMS(2)
 
        ! set radii for each of the edge mesh elements
@@ -961,7 +964,48 @@ CONTAINS
              MESHP%RAD(CC) = R1 + MESHP%EDGEPOS(CC)/NETP%EDGELEN(EC)*(R2-R1)
           ENDDO
        ENDDO
+    CASE('SINUSOIDAL')
+       ! radii obey a sinusoidal function, with a local minimum in the middle of the tubule
 
+       DO EC = 1,NETP%NEDGE
+          IF (RANDTYPE.EQ.'NONE') THEN
+             ! use general sinusoidal params (min radius, amplitude, wavelength)
+              AMP = EDGERADVARPARAMS(2) ! amplitude
+              LAM = EDGERADVARPARAMS(3) ! wavelength
+              RMIN = EDGERADVARPARAMS(1)! min radius
+              PHI = 0 ! phase from middle of tube
+          ELSE
+             ! use sinusoidal parameters for this specific edge
+             RMIN = NETP%EDGERADPARAMS(EC,1)
+             AMP = NETP%EDGERADPARAMS(EC,2)
+             LAM = NETP%EDGERADPARAMS(EC,3)
+             PHI = NETP%EDGERADPARAMS(EC,4)
+          ENDIF
+          
+          DO MC = 1,NETP%EDGENCELL(EC)
+             CC = NETP%EDGECELLS(EC,MC)
+             
+              IF (.NOT.MESHP%CELLTYPE(CC).EQ.1) THEN
+                PRINT*, 'BAD edge cell type'
+                STOP 1
+             ENDIF             
+
+             MESHP%RAD(CC) = -AMP*COS((MESHP%EDGEPOS(CC) - (NETP%EDGELEN(EC)/2))*2*PI/LAM + PHI)&
+                  & +RMIN+AMP
+             IF (ABS(MESHP%RAD(CC)).LT.EPSILON(1D0)) THEN
+                PRINT*, 'ERROR IN MESH RADII: zero radius is not allowed',CC, MESHP%EDGEPOS(CC), NETP%EDGELEN(EC), MESHP%RAD(CC)
+                STOP 1
+             ENDIF
+                
+             !PRINT*, 'TESTX1:', CC, MESHP%EDGEPOS(CC), MESHP%RAD(CC)
+          ENDDO
+       ENDDO
+    CASE DEFAULT
+       PRINT*, 'ERROR IN SETMESHRADII: unknown value for edgeradvartype. Must be CONSTANT or LINEAR', &
+            & EDGERADVARTYPE
+    END SELECT
+
+    IF (EDGERADVARTYPE.NE.'CONSTANT') THEN
        ! Set radii for each of the node and reservoir mesh elements
        DO CC = 1,MESHP%NCELL
           IF (MESHP%CELLTYPE(CC).EQ.0.OR.MESHP%CELLTYPE(CC).EQ.2) THEN
@@ -976,10 +1020,7 @@ CONTAINS
              MESHP%RAD(CC) = TOTRAD/MESHP%DEG(CC)
           ENDIF
        ENDDO
-    CASE DEFAULT
-       PRINT*, 'ERROR IN SETMESHRADII: unknown value for edgeradvartype. Must be CONSTANT or LINEAR', &
-            & EDGERADVARTYPE
-    END SELECT
+    END IF
     
   END SUBROUTINE SETMESHRADII
   
