@@ -970,10 +970,10 @@ CONTAINS
        DO EC = 1,NETP%NEDGE
           IF (RANDTYPE.EQ.'NONE') THEN
              ! use general sinusoidal params (min radius, amplitude, wavelength)
-              AMP = EDGERADVARPARAMS(2) ! amplitude
-              LAM = EDGERADVARPARAMS(3) ! wavelength
-              RMIN = EDGERADVARPARAMS(1)! min radius
-              PHI = 0 ! phase from middle of tube
+             RMIN = EDGERADVARPARAMS(1)! min radius
+             AMP = EDGERADVARPARAMS(2) ! amplitude
+             LAM = EDGERADVARPARAMS(3) ! wavelength
+             PHI = EDGERADVARPARAMS(4) ! phase from middle of tube
           ELSE
              ! use sinusoidal parameters for this specific edge
              RMIN = NETP%EDGERADPARAMS(EC,1)
