@@ -307,7 +307,7 @@ CONTAINS
           ELEN = NETP%EDGELEN(NETP%NODEEDGE(NC,EC))
           IF (ELEN.LT.MINELEN) THEN
              MINELEN = ELEN
-             ESHORT = EC
+             ESHORT = NETP%NODEEDGE(NC,EC)
           ENDIF
        ENDDO
 
@@ -317,6 +317,8 @@ CONTAINS
        IF (SUM(INTNODES(ESHORT,:)).EQ.0.AND.MINNCELL.EQ.0) THEN
           ! two terminal nodes; must have at least one internal cell
           CELLLEN = MINELEN
+          print*, 'THIS SHOULD NEVER HAPPEN!'
+          STOP 1
        ELSE
           CELLLEN = MINELEN/(MINNCELL + 0.5*SUM(INTNODES(ESHORT,:)))
        ENDIF
@@ -1016,8 +1018,10 @@ CONTAINS
              DO BCC = 1,MESHP%DEG(CC)
                 BC = MESHP%BOUNDS(CC,BCC)
                 TOTRAD = TOTRAD + MESHP%RAD(BC)
+                PRINT*, 'TESTX1:', CC, BCC, MESHP%RAD(BC)
              ENDDO
              MESHP%RAD(CC) = TOTRAD/MESHP%DEG(CC)
+             print*, 'testx2:', CC, MESHP%RAD(CC)
           ENDIF
        ENDDO
     END IF

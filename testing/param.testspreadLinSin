@@ -10,7 +10,7 @@ ACTION rundynamics
 RNGSEED -2
 
 # network structure stored in this file
-NETFILE linear2.net
+NETFILE linear3.net
 # dimension of the network
 NETWORKDIM 2
 
@@ -32,7 +32,7 @@ DOFLOW F
 # file for outputting mesh structure
 MESHFILE *.mesh.txt
 # meshing parameters: this gives the maximal size of a mesh cell
-MESHSIZE 0.1D0 1
+MESHSIZE 0.05D0 1
 
 # ----------------------
 # dynamic run and output parameters
@@ -53,9 +53,9 @@ OUTFILE *.out 1D6
 # initial conditions
 # ---------------
 # start near central node
-#STARTNODES 2
-STARTPOS 2D0 0D0
-STARTNODERAD 0.05D0
+STARTNODES 2
+#STARTPOS 2D0 0D0
+#STARTNODERAD 0.06D0
 # initial concentrations of (1) free calcium and (2) total protein
 # these are linear concentrations
 # (Units: mM concentration)
@@ -83,4 +83,8 @@ DORESERVOIRS F
 # spatially uniform buffer
 UNIFORMBUFFER F
 
+
+# randomly select sinusoid parameters
+# min rmin, max rmin, min amplitude, max amplitude, min wavelength, max wavelength
+EDGERADRAND sinuniform 0.01D0 0.04D0 0D0 0.05D0 0.2D0 1D0
 
