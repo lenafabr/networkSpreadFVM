@@ -317,7 +317,7 @@ CONTAINS
        IF (SUM(INTNODES(ESHORT,:)).EQ.0.AND.MINNCELL.EQ.0) THEN
           ! two terminal nodes; must have at least one internal cell
           CELLLEN = MINELEN
-          print*, 'THIS SHOULD NEVER HAPPEN!'
+          print*, 'setting up mesh: THIS SHOULD NEVER HAPPEN!'
           STOP 1
        ELSE
           CELLLEN = MINELEN/(MINNCELL + 0.5*SUM(INTNODES(ESHORT,:)))
