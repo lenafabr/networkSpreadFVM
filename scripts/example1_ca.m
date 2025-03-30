@@ -1,4 +1,4 @@
-dirname = '~/ER_Ca_rot/networkSpreadFVM-main/examples/';
+dirname = '~/proj/networkFVMsims/examples/';
 
 %% total flux out of holes
 filename = [dirname 'example1_ca.out'];

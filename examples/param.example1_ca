@@ -1,21 +1,26 @@
+# Default units: seconds, micrometers
+
 # parameter file for calcium release from a network
 ACTION rundynamics
-# instant switching of random velocities (although vel=0 in this example)
-VELCONTROL randvelswitch
 
-# set random number generator by system time and file name 
+# set random number generator by system time and file name
+# positive: use that number as RNG seed, same results each time
+# -2: use combo of file name and current system msec time
 RNGSEED -2
+
+# instant switching of random velocities (although vel=0 in this example)
+# does not matter because velocity is 0
+VELCONTROL randvelswitch
+# Flow velocity on edges
+RUNSPEED 0D0
+# if using non-zero velocities, switch direction at this rate
+STOPRATE 10D0
+
 
 # network structure stored in this file
 NETFILE circlenuchexresv.net
 # dimension of the network
 NETWORKDIM 2
-
-
-# Flow velocity on edges
-RUNSPEED 0D0
-# if using non-zero velocities, switch direction at this rate
-STOPRATE 10D0
 
 # file for outputting mesh structure
 MESHFILE *.mesh.txt
@@ -29,10 +34,12 @@ MESHSIZE 0.2D0
 NSTEP 1D6
 # timestep size
 DELT 2D-5
-# how often to dump snapshots and in what file
+# how often to dump snapshots and in what file. Dump every N steps
 SNAPSHOTS 5D3 *.snap.txt
 # how often to print output on screen
 PRINTEVERY 1D3
+
+# outputting flux of calcium out of the network
 # output total flux out of network into this file every 20 timesteps.
 OUTFILE *.out 20
 OUTPUTTOTFLUXONLY T
@@ -60,7 +67,7 @@ DOBUFFER T
 FASTEQUIL T
 # equilibrium binding dissociation constant (linear concentration units: mM*pi*a^2)
 KDEQUIL 2.5e-3
-# diffusion coefficient of (1) free calcium (2) buffer protein
+# diffusion coefficient of (1) free calcium (2) buffer protein. Units: um^2/sec
 DCOEFF 27.55D0 2.755D0
 
 # ------------
@@ -70,9 +77,15 @@ DCOEFF 27.55D0 2.755D0
 # nodes connected to the reservoirs are listed within the network file
 # eg: all nodes marked R1 belong to reservoir 1
 DORESERVOIRS T
+# Reservoir here is the perinuclear region, treated as a single sheet of height 60nm
+# surrounding a sphere of diameter 15um
+# Numbers are: 
 # Reservoir volume in units of length, actually V/(pi a^2)
-# 5e3 is for a 15um-diam nucleus with single sheet 60nm high, tube radius 50nm
-RESVINFO 1 5D3 0D0
+# Reservoir SA in units of length, actually SA/(2*pi*a)
+# last number is the effective length for flux calculations
+# for a sheet: r^2/h*log(Rhat/r) where Rhat = sqrt(Anuc/pi)
+# length units are in um
+RESVINFO 1 5.4D3 2250D0 0.2377D0
 
 # ---------------------
 # permeability: estimated as D/dmem*A/(pi a^2)

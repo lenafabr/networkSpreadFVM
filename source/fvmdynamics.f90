@@ -624,6 +624,10 @@ CONTAINS
           ! connection with external concentrations at permeable node                    
           ! can have different permeability for each field
           ! save flux to external environment only
+          IF (DSP%PERMTOGLOBALRESV) THEN
+             PRINT*, 'EULER STEP is not yet set up with PERMTOGLOBALRES'
+             STOP 1
+          ENDIF
           FLUX(CC,:) = -DSP%PERM(CC,:)*(DSP%CEXT - DSP%FIELDS(CC,:))
           DFDT(CC,:) = DFDT(CC,:) - FLUX(CC,:)/MESHP%VOL(CC)
        ELSE
@@ -854,7 +858,7 @@ CONTAINS
        IF (DSP%PERMTOGLOBALRESV) THEN
           ! total flux out of permeable nodes   
           TOTPERMFLUX = SUM(pack(FLUX(:,1),DSP%ISPERM))
-          FLUX(CC,1) = FLUX(CC,1) + TOTPERMFLUX/MESHP%VOL(CC)
+          FLUX(CC,1) = FLUX(CC,1) + TOTPERMFLUX
        ENDIF
        DFDT(CC,1) = FLUX(CC,1)/MESHP%VOL(CC)
     END IF

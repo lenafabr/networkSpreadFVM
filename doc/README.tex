@@ -252,6 +252,13 @@ By default, the simulations work with concentrations in units of $mM \times \pi 
 	\end{itemize}
 \end{itemize}
 %
+\item {\it FASTEQUIL}
+\begin{itemize}
+	\item 1 logical. Default F
+	\item Assume fast equilibration of binding of ions to buffer protein sites
+	\item If this is True, then there will be 2 fields: (1) free ligands, (2) total buffer sites
+\end{itemize}
+%
 \item {\it FIXNODE}
 \begin{itemize}
 	\item 2 integers, 1 float. No defaults
@@ -352,6 +359,18 @@ By default, the simulations work with concentrations in units of $mM \times \pi 
 	\item Print simulation progress to screen every so many steps
 \end{itemize}
 %
+\item {\it PERIODICGLOBALPERM}
+\begin{itemize}
+	\item  value: 3 or more floats; default: turned off
+	\item Set up periodic global release from the network. Every so often, all mesh cells become permeable and remain so for a certain duration of time, then stop being permeable again.
+	\item Values are:
+	\begin{itemize}
+		\item Period for becoming permeable (units of time)
+		\item Duration of permeable interval (units of time)
+		\item Permeability during the permeable interval for each of the fields. Provide one value for each field. If PERMPREFACTOR is turned on this is a permeability prefactor ($2P/(aD)$ if working with 1D concentrations). See PERMNODE keyword documentation for details on how permeability values are defined.
+	\end{itemize}	
+\end{itemize}
+%
 \item {\it PERMNEARNODEDIST}
 \begin{itemize}
 	\item  value: 1 float; default: -1.0
@@ -379,6 +398,14 @@ By default, the simulations work with concentrations in units of $mM \times \pi 
 	
 \end{itemize}
 
+\item {\it PERMPOS}
+\begin{itemize}
+	\item  value: 3-4 floats; default: 0 0 0
+	\item Center permeable region around a particular set of coordinates
+	\item First 2-3 values are the coordinates (should be same number as the network dimensionality). Last value is the permeability of the region centered on these coordinates.
+	\item Radius of permeable region is set by PERMNEARNODEDIST (see caveats for that keyword about graph distance vs spatial distance)
+\end{itemize}
+
 \item {\it PERMPREFACTOR}
 \begin{itemize}
 	\item  value: 1 optional logical; default: False if keyword not supplied. True if keyword is supplied by itself
@@ -386,6 +413,25 @@ By default, the simulations work with concentrations in units of $mM \times \pi 
 	\item {\color{red} Strongly recommended: set this to true} (larger mesh elements should have higher permeability)
 	\item If this is false, then the permeability is set directly by the value given via PERMNODE keyword, regardless of mesh cell size
 \end{itemize}
+
+\item {\it RESVINFO}
+\begin{itemize}
+	\item 1 integer, 3 floats; default: none
+	\item Information about a well-mixed reservoir
+	\item Integer: which reservoir?
+	\item Parameters:
+	\begin{enumerate}
+		\item Volume, rescaled for 1D calculations as $V_{1D} = V/(\pi a^2)$ where $a$ is tubule radius. If CONCENTRATIONS3D is set, this should just be the 3D volume.
+		\item Surface area, rescaled for 1D calculations as $A_{1D} = A/(2\pi a^2)$. If CONCENTRATIONS3D is set, this should just be the normal surface area.
+		\item Effective length for defining flux between adjacent mesh elements. For a flat sheet this is $(a^2 /h) \log \hat{R}/a$, where $\hat{R}$ is the radius of the flat sheet, or is $\hat{R} = \sqrt{A_\text{nuc}/\pi}$ if the sheet is wrapped around a spherical nucleus. For a sphere, the effective length is $\pi a/2$, regardless of the sphere size.
+	\end{enumerate}
+	\item seed for random number generator
+	\item value of 0 will seed with system time in milliseconds
+	\item value of -1 will use the last 5 characters in the suffix
+	\item value of -2 will use the last 4 charactes in the suffix and the millisecond time. This is useful when launching many iterations nearly simultaneously on a cluster.
+	\item Other values: the seed is used directly for repeatable simulations. 
+\end{itemize}
+
 
 \item {\it RNGSEED}
   \begin{itemize}
@@ -415,6 +461,7 @@ By default, the simulations work with concentrations in units of $mM \times \pi 
 \begin{itemize}
 	\item 1 or more floats; default: 1D0
 	\item Starting concentrations for each field 
+	\item If running equilibrated binding (FASTEQUIL), then the 2 concentrations are: (1) free ion, (2) total buffer sites
 	\item If $<0$, then set starting concentrations as defined by STARTNODES such that the total initial mass of each field is 1.
 \end{itemize}
 %
