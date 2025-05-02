@@ -423,7 +423,7 @@ CONTAINS
     ! set parameters of dynamical system using global keyword arguments
     ! NNODE = number of network nodes, to allow for fixing random nodes
     USE KEYS, ONLY : KON, KOFF, KDEQUIL, DOBUFFER, DCOEFF, FASTEQUIL, &
-         & FIXNODES,FIXVALS, NFIX,MOBILEFIELD, RANDFIXNODES, &
+         & FIXNODES,FIXVALS, NFIX,NFIXRESV,MOBILEFIELD, RANDFIXNODES, &
          & FIXEDGEVEL,FIXEDGEVELVAL,NFIXEDGEVEL,&
          & CEXT, NPERM, PERMEABILITY, TRACKFLUXPERM, PERMNODES, PERMFROMFILE, &
          & RANDPERMNODES, USEPERMPREFACTOR, FIXNEARNODEDIST, NACT, ACTRATE, ACTNODES,&
@@ -451,8 +451,6 @@ CONTAINS
     DOUBLE PRECISION :: DIFFS(DSP%MESHP%NCELL,2), DISTS(DSP%MESHP%NCELL)
     INTEGER :: TMPARR(1), FIXRESV(MAXNABSORBER,MAXNFIELD)
     LOGICAL :: SUCCESS   
-    INTEGER, ALLOCATABLE :: selection_pool(:)
-    INTEGER :: NRESNODEFIX(MAXNFIELD)  
     
     FIXRESV = 0
     
@@ -486,15 +484,6 @@ CONTAINS
        ENDDO
        NODEAVAIL = CT
     ENDIF    
-
-    ! for debug
-    PRINT *, 'NODEAVAIL =', NODEAVAIL
-    IF (NODEAVAIL == 0) THEN
-       PRINT *, 'WARNING: No nodes eligible for reservoir fixing!'
-    ENDIF
-    PRINT *, 'First few NODELIST:', NODELIST(1:MIN(5,NODEAVAIL))
-    ! debug ends
-
  
     IF (.NOT.DSP%ARRAYSET) THEN
        PRINT*, 'ERROR IN SETPARAMSDYNSYS: dynamic system not yet allocated'
@@ -634,23 +623,13 @@ CONTAINS
        ENDDO
     ENDIF
     
-    PRINT *, 'ALLOWRESVFIX:', ALLOWRESVFIX(1:NETP%NRESV)
-
+    
     IF (RANDFIXRESV) THEN
        ! randomly select (without replacement) reservoirs to be fixed (excluding those that are not allowed to be fixed
        DO FC = 1,DSP%NFIELD
-         NRESNODEFIX(FC) = 1 
-         ! for debug
-            selection_pool = PACK((/(RC, RC=1,NETP%NRESV)/), ALLOWRESVFIX(1:NETP%NRESV))
-            PRINT*, 'node num=', SIZE(selection_pool), 'NRESNODEFIX=', NRESNODEFIX(FC), 'Selection pool size:', SIZE(selection_pool)
-            IF (SIZE(selection_pool) < NRESNODEFIX(FC)) THEN
-               PRINT*, 'ERROR: Not enough reservoir nodes to fix!'
-               STOP 1
-            ENDIF
-         ! debug ends
           CALL RANDSELECT_INT( PACK((/(RC, RC=1,NETP%NRESV)/),ALLOWRESVFIX(1:NETP%NRESV)), &
-               & NRESNODEFIX(FC),.FALSE.,FIXRESV(1:NRESNODEFIX(FC),FC),TMP)
-          PRINT*, 'Field ', FC, NRESNODEFIX(FC), ' fixed reservoirs:', FIXRESV(1:NRESNODEFIX(FC),FC)
+               & NFIXRESV(FC),.FALSE.,FIXRESV(1:NFIX(FC),FC),TMP)
+          PRINT*, 'Field ', FC, NFIX(FC), ' fixed reservoirs:', FIXRESV(1:NFIX(FC),FC)
           
        ENDDO
     END IF

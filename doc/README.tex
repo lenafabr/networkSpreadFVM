@@ -78,6 +78,8 @@ A few example parameter files are provided
 
 \subsection{Ca$^{2+}$ release from a honeycomb network}
 
+This example calculates calcium release assuming rapid binding equilibration with buffer proteins. The code evolves two spatiotemporal fields: (1) the free calcium concentration and (2) the buffer binding site concentration, which in this simple case is uniform throughout
+
 The parameters for this example run are stored in \verb=examples/param.example1_ca=). 
 Within the examples directory, run the code as:
 
@@ -412,6 +414,18 @@ By default, the simulations work with concentrations in units of $mM \times \pi 
 	\item If this is true, then the permeability value set by PERMNODE is treated as a prefactor, to be scaled by $A\cdot D$ (where $A$ is surface area of mesh cell and $D$ is particle diffusivity) when incorporated into simulations	
 	\item {\color{red} Strongly recommended: set this to true} (larger mesh elements should have higher permeability)
 	\item If this is false, then the permeability is set directly by the value given via PERMNODE keyword, regardless of mesh cell size
+\end{itemize}
+
+\item {\it RANDFIXRESV}
+\begin{itemize}
+	\item 2 integers, 1 floats; default: none
+	\item Fix a particular field on a random subset of reservoirs (selected without replacement)
+	\item Values are: 
+	\begin{enumerate}
+		\item Which field to fix?
+		\item How many reservoirs to fix?
+		\item What concentration to fix those reservoirs to?
+	\end{enumerate}
 \end{itemize}
 
 \item {\it RESVINFO}

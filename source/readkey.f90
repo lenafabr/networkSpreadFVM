@@ -100,6 +100,7 @@ SUBROUTINE READKEY
   ABSORBERS = 0
   NABS = 0 ! number of absorber nodes
   NFIX = 0 ! number of fixed nodes
+  NFIXRESV = 0 ! number of reservoirs to fix if selecting randomly
   NFIXCELL = 0 ! number of fixed cells
   NFIXPT = 0 ! Number of fixed points
   FIXNODEFROMNETFILE = .false. ! determine fixed nodes based on network file
@@ -638,7 +639,7 @@ SUBROUTINE READKEY
            RANDFIXRESV = .TRUE.
            RANDFIXNODES = .FALSE.
            CALL READI(FC) ! which field is this for
-           CALL READI(NFIX(FC)) ! how many reservoirs to fix?
+           CALL READI(NFIXRESV(FC)) ! how many reservoirs to fix?
            CALL READF(TMP) ! What value to fix to
            FIXVALS(:,FC) = TMP
         CASE('RANDPERMNODES')

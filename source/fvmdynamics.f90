@@ -749,7 +749,12 @@ CONTAINS
 
                 FLUXDIFF(1) = FLUXDIFF(1) &
                      & + DSP%DCOEFF(1)*(DSP%FIELDS(BC,1) - DSP%FIELDS(CC,1))/MESHP%LENPM(CC,BCt) &
-                     & + DSP%DCOEFF(2)*(BFIELD(BC) - BFIELD(CC))/MESHP%LENPM(CC,BCt)               
+                     & + DSP%DCOEFF(2)*(BFIELD(BC) - BFIELD(CC))/MESHP%LENPM(CC,BCt)
+                
+                ! IF(CC.EQ.15576) THEN
+                !    PRINT*, 'TESTX0:', BC, FLUXDIFF(1), DSP%FIELDS(CC,1), &
+                !         & DSP%FIELDS(BC,1), BFIELD(CC), BFIELD(BC), MESHP%LENPM(CC,BCt)
+                ! ENDIF
                 IF (.NOT.DSP%UNIFORMBUFFER) THEN  ! spatially varying buffer conc
                    ! get diffusive flux of  total protein 
                    FLUXDIFF(2) = FLUXDIFF(2) + DSP%DCOEFF(2)*(DSP%FIELDS(BC,2) - DSP%FIELDS(CC,2))/MESHP%LENPM(CC,BCt)
@@ -835,17 +840,26 @@ CONTAINS
              FLUX(CC,:) = -DSP%PERM(CC,:)*(DSP%CEXT - DSP%FIELDS(CC,:))
           ENDIF
           DFDT(CC,:) = DFDT(CC,:) - FLUX(CC,:)/MESHP%VOL(CC)
+          IF(CC.EQ.15576) THEN
+             PRINT*, 'TESTX0: WHY PERM?'
+             STOP 1
+          ENDIF
        ENDIF
        
        IF (.NOT.DSP%TRACKDCDT) THEN
           ! get change in free ligand from delta total lig and delta total prot          
           LKD = DSP%FIELDS(CC,1) + DSP%KDEQUIL;
           IF (DSP%UNIFORMBUFFER) THEN ! spatially constant buffer
+             ! IF(CC.EQ.15576) THEN
+             !    print*, 'TESTX1:', CC, DFDT(CC,1), &
+             !         & DFDT(CC,1)/(1 + DSP%FIELDS(CC,2)*DSP%KDEQUIL/LKD**2),&
+             !         & DSP%FIELDS(CC,:),BFIELD(CC),CFIELD(CC)
+             ! END IF
              DFDT(CC,1) = DFDT(CC,1)/ &            
                   & (1 + DSP%FIELDS(CC,2)*DSP%KDEQUIL/LKD**2)
-          ELSE
-             DFDT(CC,1) = (DFDT(CC,1) - DSP%FIELDS(CC,1)*DFDT(CC,2)/LKD)/ &            
-                  & (1 + DSP%FIELDS(CC,2)*DSP%KDEQUIL/LKD**2)
+          ELSE             
+             DFDT(CC,1) = (DFDT(CC,1) - DSP%FIELDS(CC,1)*DFDT(CC,2)/LKD)/ &    
+                  & (1 + DSP%FIELDS(CC,2)*DSP%KDEQUIL/LKD**2)             
           ENDIF
        END IF
     ENDDO
