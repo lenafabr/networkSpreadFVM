@@ -228,7 +228,8 @@ CONTAINS
                    WRITE(OU,*) FC, pack(FLUX(:,FC),DSP%ISPERM), PACK(DSP%PERM(:,FC),DSP%ISPERM)
                 ENDDO
              ENDIF
-          ELSE             
+          ELSE
+             ! LOOK HERE FOR FORMAT OF FLUX OUTPUT
              WRITE(OU,*) CURTIME, NFIELD, DELT, 0, NFIX(1:NFIELD)
 
              ! output flux out of fixed cells          
