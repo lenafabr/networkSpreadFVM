@@ -609,7 +609,7 @@ SUBROUTINE READKEY
            FIXVALS(:,FC) = TMP
         CASE('RANDFIXNODES')
            RANDFIXNODES = .TRUE.
-           RANDFIXRESV = .FALSE.
+!           RANDFIXRESV = .FALSE.
            CALL READI(FC) ! which field is this for
            CALL READI(NFIX(FC)) ! how many nodes to fix?
            CALL READF(TMP) ! What value to fix to
@@ -637,7 +637,7 @@ SUBROUTINE READKEY
            ENDDO
         CASE('RANDFIXRESV')
            RANDFIXRESV = .TRUE.
-           RANDFIXNODES = .FALSE.
+           !RANDFIXNODES = .FALSE.
            CALL READI(FC) ! which field is this for
            CALL READI(NFIXRESV(FC)) ! how many reservoirs to fix?
            CALL READF(TMP) ! What value to fix to
