@@ -227,9 +227,10 @@ CONTAINS
     STARTCELLS = .FALSE.
     DO CC = 1,DSP%MESHP%NCELL
        DO NC = 1,NSTARTPOS
-          DIST2 = SUM((DSP%MESHP%POS(CC,:) - STARTPOS(NC,:))**2)
+          DIST2 = SUM((DSP%MESHP%POS(CC,:) - STARTPOS(NC,:))**2)         
           IF (DIST2.LT.RAD**2) THEN
              STARTCELLS(CC) = .TRUE.
+             PRINT*, 'Cell included in starting concentration:', CC
              TOTLEN = TOTLEN + DSP%MESHP%VOL(CC)
           ENDIF
        ENDDO
