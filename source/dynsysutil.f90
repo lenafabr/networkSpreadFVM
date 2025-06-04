@@ -423,7 +423,7 @@ CONTAINS
     ! set parameters of dynamical system using global keyword arguments
     ! NNODE = number of network nodes, to allow for fixing random nodes
     USE KEYS, ONLY : KON, KOFF, KDEQUIL, DOBUFFER, DCOEFF, FASTEQUIL, &
-         & FIXNODES,FIXVALS, NFIX,MOBILEFIELD, RANDFIXNODES, &
+         & FIXNODES,FIXVALS, NFIX,NFIXRESV,MOBILEFIELD, RANDFIXNODES, &
          & FIXEDGEVEL,FIXEDGEVELVAL,NFIXEDGEVEL,&
          & CEXT, NPERM, PERMEABILITY, TRACKFLUXPERM, PERMNODES, PERMFROMFILE, &
          & RANDPERMNODES, USEPERMPREFACTOR, FIXNEARNODEDIST, NACT, ACTRATE, ACTNODES,&
@@ -628,10 +628,13 @@ CONTAINS
        ! randomly select (without replacement) reservoirs to be fixed (excluding those that are not allowed to be fixed
        DO FC = 1,DSP%NFIELD
           CALL RANDSELECT_INT( PACK((/(RC, RC=1,NETP%NRESV)/),ALLOWRESVFIX(1:NETP%NRESV)), &
-               & NFIX(FC),.FALSE.,FIXRESV(1:NFIX(FC),FC),TMP)
-          PRINT*, 'Field ', FC, NFIX(FC), ' fixed reservoirs:', FIXRESV(1:NFIX(FC),FC)
-          
-       ENDDO
+               & NFIXRESV(FC),.FALSE.,FIXRESV(1:NFIX(FC),FC),TMP)
+          PRINT*, 'Field ', FC, NFIXRESV(FC), ' fixed reservoirs:', FIXRESV(1:NFIX(FC),FC)
+
+          ! update the total number of fixed mesh cells to include the fixed reservoirs
+          NFIX(FC) = NFIX(FC) + NFIXRESV(FC)
+       ENDDO       
+       
     END IF
     
     ! fix the cells corresponding to the fixed network nodes
@@ -697,7 +700,7 @@ CONTAINS
 
              ! also fix if the reservoir itself is in the fix list
              IF (ALLOWFIXEDRESV) THEN
-                DO CT = 1,NFIX(FC)
+                DO CT = 1,NFIXRESV(FC)
                    IF (FIXRESV(CT,FC).EQ.RC) THEN                     
                       DSP%ISFIXED(CC,FC)=.TRUE.
                       DSP%FIXVALS(CC,FC) = FIXVALS(CT,FC)
@@ -894,6 +897,22 @@ CONTAINS
        ENDIF
     ENDDO
 
+    print*, 'Fixed cells for field 1:', NFIX(1)
+    DO CC = 1,MESHP%NCELL
+       IF (DSP%ISFIXED(CC,1)) THEN
+          SELECT CASE (MESHP%CELLTYPE(CC))
+          CASE(0)
+             PRINT*, 'Node ', MESHP%NODEIND(CC), ', cell ', CC
+          CASE(1)
+             PRINT*, 'Edge ', MESHP%EDGEIND(CC,1), ', cell ', CC
+          CASE(2)
+             PRINT*, 'Reservoir ', MESHP%RESVIND(CC), ', cell ', CC
+          CASE DEFAULT
+             PRINT*, 'this mesh cell is an unknown case:', CC, MESHP%CELLTYPE(CC)
+          END SELECT
+       ENDIF
+    ENDDO
+
     DSP%VARRAD = VARRAD
     DSP%USEEDGEFLOW = DOFLOW
 
@@ -940,7 +959,7 @@ CONTAINS
     
     DSP%MESHP=>MESHP
     
-    DSP%ARRAYSET = .TRUE.
+    DSP%ARRAYSET = .TRUE.    
 
   END SUBROUTINE SETUPDYNSYS
 
