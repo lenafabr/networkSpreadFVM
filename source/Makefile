@@ -4,7 +4,7 @@ FC = gfortran
 FLAGS = -O3 
 DEBUGFLAGS = -g -fbacktrace -ffpe-trap=zero,overflow,invalid -fcheck=all -fbounds-check
 OSGFLAGS = -static
-LIBS =  -llapack -lblas  -lgfortran -lm
+LIBS =  -llapack -lblas -lgfortran -lm
 LEAKFLAGS = '-g -O0'
 
 # executable name
