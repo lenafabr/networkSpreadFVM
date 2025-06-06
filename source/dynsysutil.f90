@@ -219,8 +219,7 @@ CONTAINS
           DSP%FIELDS(:,FC) = BACKGROUNDCONC(FC)
        ENDDO
     ENDIF
-
-    print*, 'testx4:', DSP%FIELDS(3,:)
+    
     ! IF (ANY(NETP%NODEDEG(STARTNODES).EQ.1)) THEN
     !    PRINT*, 'ERROR IN INITIALIZEFIELDNODES: cannot initialize on terminal nodes'
     !    STOP 1

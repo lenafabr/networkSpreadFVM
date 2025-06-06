@@ -321,7 +321,7 @@ CONTAINS
                & STEP, CURTIME, INTFIELD/TOTLEN, NFIELD,&
                & DBLE(COUNT(EDGECLOSED))/NETP%NEDGE, SUM(CFIELD*MESHP%VOL)
 
-          print*, 'TESTX2:', DSP%FIELDS(3,1:2), CFIELD(3), dsp%kdequil
+          !print*, 'TESTX2:', DSP%FIELDS(3,1:2), CFIELD(3), dsp%kdequil
        ENDIF
     ENDDO
 
