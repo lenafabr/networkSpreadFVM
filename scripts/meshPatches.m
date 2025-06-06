@@ -50,11 +50,12 @@ for ec = 1:NT.nedge
 
         % radius of mesh cell
         if (length(radii)>1)
-            tubeR = radii(ic);  
+            tubeR = radii(mind(ic));  
         else
             tubeR = radii;
         end
 
+        %disp([ic startpos(ic,:) endpos(ic,:) tubeR])
 
         % make rectangle
         dv = endpos(ic,:)-startpos(ic,:); dv = dv/norm(dv);

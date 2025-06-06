@@ -1,7 +1,7 @@
 addpath('../../networktools')
 
 %% load network data
-NT = NetworkObj('../testing/linear2.net',struct('dim',2));
+NT = NetworkObj('../testing/linear3.net',struct('dim',2));
 NT.interpolateEdgePaths(2);
 NT.setCumEdgeLen();
 
@@ -21,7 +21,7 @@ showtime = 2; % time at which to show in sec
  Rabs = 0.25;
  tubeR = MSH.rad*1;
  clf
-for sc =100%:nsnap
+for sc =2%:nsnap
     [sc nsnap]
     ind = find(MSH.resvind==0);    
     %intpos = interpolateMeshPos(MSH,NT);    
@@ -36,7 +36,7 @@ for sc =100%:nsnap
    
     colormap copper
         
-    caxis([0,0.05])
+    %caxis([0,0.1])
 
     %title(sprintf('Snap %d time %f', sc, snaptimes(sc)))
     % title('WT region 1')    

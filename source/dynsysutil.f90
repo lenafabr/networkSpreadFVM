@@ -231,9 +231,10 @@ CONTAINS
     STARTCELLS = .FALSE.
     DO CC = 1,DSP%MESHP%NCELL
        DO NC = 1,NSTARTPOS
-          DIST2 = SUM((DSP%MESHP%POS(CC,:) - STARTPOS(NC,:))**2)
+          DIST2 = SUM((DSP%MESHP%POS(CC,:) - STARTPOS(NC,:))**2)         
           IF (DIST2.LT.RAD**2) THEN
              STARTCELLS(CC) = .TRUE.
+             PRINT*, 'Cell included in starting concentration:', CC
              TOTLEN = TOTLEN + DSP%MESHP%VOL(CC)
           ENDIF
        ENDDO
@@ -632,11 +633,14 @@ CONTAINS
        ! randomly select (without replacement) reservoirs to be fixed (excluding those that are not allowed to be fixed
        DO FC = 1,DSP%NFIELD
           CALL RANDSELECT_INT( PACK((/(RC, RC=1,NETP%NRESV)/),ALLOWRESVFIX(1:NETP%NRESV)), &
-               & NFIXRESV(FC),.FALSE.,FIXRESV(1:NFIX(FC),FC),TMP)
+               & NFIXRESV(FC),.FALSE.,FIXRESV(1:NFIXRESV(FC),FC),TMP)
           PRINT*, 'Field ', FC, NFIXRESV(FC), ' fixed reservoirs:', FIXRESV(1:NFIX(FC),FC)
 
           ! update the total number of fixed mesh cells to include the fixed reservoirs
           NFIX(FC) = NFIX(FC) + NFIXRESV(FC)
+          DO CT = 1,NFIXRESV(FC)
+             DSP%FIXVALS(FIXRESV(CT,FC),FC) = FIXVALS(CT,FC)
+          ENDDO
        ENDDO       
        
     END IF
