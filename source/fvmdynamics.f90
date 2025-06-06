@@ -136,19 +136,15 @@ CONTAINS
     OPEN(FILE=OUTFILE,UNIT=OU,STATUS='UNKNOWN')
 
 
-    CALL INTEGRATEFIELD(DSP,INTFIELD,TOTLEN,.true.)
-    PRINT*, 'TESTX1:',  CURTIME, TOTLEN
-    PRINT*, 'TESTX1B:', INTFIELD/TOTLEN, NFIELD
-    PRINT*, 'TESTX2:', DBLE(COUNT(EDGECLOSED))
-    PRINT*, 'TESTX3:', NETP%NEDGE
-    PRINT*, 'STEP, TIME, AVG FIELDS, NFIELD, EDGECLOSED: ', &
+    IF (DSP%BUFFERTYPE.EQ.2) THEN! equilibrated buffers
+       CFIELD = DSP%FIELDS(:,1)*(1+DSP%FIELDS(:,2)/(DSP%FIELDS(:,1)+DSP%KDEQUIL))
+    ELSE
+       CFIELD = DSP%FIELDS(:,DSP%NFIELD)
+    ENDIF
+    CALL INTEGRATEFIELD(DSP,INTFIELD,TOTLEN,.true.)   
+    PRINT*, 'STEP, TIME, AVG FIELDS, NFIELD, EDGECLOSED, TOTAVG: ', &
                & 0, CURTIME, INTFIELD/TOTLEN, NFIELD,&
-               & DBLE(COUNT(EDGECLOSED))/NETP%NEDGE
-
-   
-    ! DO CC = 1,MESHP%NCELL
-    !    PRINT*, CC, MESHP%POS(CC,2),DSP%ISFIXED(CC,1), DSP%FIXVALS(CC,1)
-    ! ENDDO
+               & DBLE(COUNT(EDGECLOSED))/NETP%NEDGE, SUM(CFIELD*MESHP%VOL)    
 
     ! probability of starting a processive run over an edge on any given step
     Pstart = 1D0-EXP(-DELT*STARTRATE)
@@ -324,6 +320,8 @@ CONTAINS
           PRINT*, 'STEP, TIME, AVG FIELDS, NFIELD, EDGECLOSED, TOTAVG: ', &
                & STEP, CURTIME, INTFIELD/TOTLEN, NFIELD,&
                & DBLE(COUNT(EDGECLOSED))/NETP%NEDGE, SUM(CFIELD*MESHP%VOL)
+
+          print*, 'TESTX2:', DSP%FIELDS(3,1:2), CFIELD(3), dsp%kdequil
        ENDIF
     ENDDO
 
@@ -728,7 +726,6 @@ CONTAINS
                 ! area of cell boundary
                 ABOUND = MESHP%BOUNDAREA(CC,BCT)
 
-!                PRINT*, 'TESTX1:', DSCL, ABOUND
                 ! flux for total ligand
                 ! This is formula 1.6 from Berezhkovskii, 2007 (where FIELDS is c/A, the 3D concentration)
                 FLUXDIFF(1) = FLUXDIFF(1) &
@@ -751,6 +748,9 @@ CONTAINS
                 FLUXDIFF(1) = FLUXDIFF(1) &
                      & + DSP%DCOEFF(1)*(DSP%FIELDS(BC,1) - DSP%FIELDS(CC,1))/MESHP%LENPM(CC,BCt) &
                      & + DSP%DCOEFF(2)*(BFIELD(BC) - BFIELD(CC))/MESHP%LENPM(CC,BCt)
+
+               ! print*, 'testx2:', cc, bct, bc, MESHP%LENPM(CC,BCt), MESHP%VOL(CC), DSP%FIELDS(BC,1), DSP%FIELDS(CC,1),&
+               !      & DSP%DCOEFF(1)*(DSP%FIELDS(BC,1) - DSP%FIELDS(CC,1))/MESHP%LENPM(CC,BCt)
                 
                 ! IF(CC.EQ.15576) THEN
                 !    PRINT*, 'TESTX0:', BC, FLUXDIFF(1), DSP%FIELDS(CC,1), &
@@ -763,7 +763,7 @@ CONTAINS
              END IF
           ENDIF
        ENDDO
-
+       
        ! Advective flux: via Lax-Wendroff discretization
        ! WARNING: flows are not set up with reservoir elements or with varrad
        FLUXADV = 0D0
@@ -817,8 +817,8 @@ CONTAINS
           TOTFLUXPUMP = TOTFLUXPUMP + FLUXPUMP(1)
        END IF
        
-       DFDT(CC,:) = (FLUXDIFF+FLUXADV+FLUXPUMP)/MESHP%VOL(CC)
-     
+       DFDT(CC,:) = (FLUXDIFF+FLUXADV+FLUXPUMP)/MESHP%VOL(CC)       
+       
        ! DO FC = 1,DSP%NFIELD
        !    IF (.NOT.DSP%MOBILEFIELD(FC)) THEN
        !       ! field not allowed to move
@@ -863,7 +863,7 @@ CONTAINS
                   & (1 + DSP%FIELDS(CC,2)*DSP%KDEQUIL/LKD**2)             
           ENDIF
        END IF
-    ENDDO
+    ENDDO    
     
     IF (MESHP%USEGLOBALRESV) THEN             
        CC = MESHP%GLOBALRESVIND
@@ -882,7 +882,7 @@ CONTAINS
     
     ! check that total mass is not changing
     !GLOBALTEST = GLOBALTEST+SUM(FLUX(:,1))
-    !PRINT*, 'TESTX1:', SUM(FLUX(:,1)), GLOBALTEST, SUM(CFIELD*DSP%MESHP%VOL)   
+    !PRINT*, 'TESTX3:', SUM(FLUX(:,1)), GLOBALTEST, SUM(CFIELD*DSP%MESHP%VOL)   
     
     
     ! no change in fixed cells
