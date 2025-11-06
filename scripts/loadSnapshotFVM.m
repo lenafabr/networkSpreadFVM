@@ -6,8 +6,8 @@ function [fields,snaptimes,vels,CL ] = loadSnapshotFVM(filename)
     % later as if it was experimental data
 
   % data = dlmread(filename);
-   %% updated to use readtable instead of dlmread
-   data = readtable(filename);
+   %% updated to use readtable instead of dlmread  
+   data = readtable(filename,'ReadVariableNames', false,'Delimiter',' ','MultipleDelimsAsOne', true,'LeadingDelimitersRule', 'ignore');
    %%
    nfield = data{1,1};
    ncell = data{1,2};
