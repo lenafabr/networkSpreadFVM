@@ -5,13 +5,16 @@ function [fields,snaptimes,vels,CL ] = loadSnapshotFVM(filename)
     % processing
     % later as if it was experimental data
 
-   data = dlmread(filename);
-   nfield = data(1,1);
-   ncell = data(1,2);
-   maxdeg = data(1,3);
+  % data = dlmread(filename);
+   %% updated to use readtable instead of dlmread
+   data = readtable(filename);
+   %%
+   nfield = data{1,1};
+   ncell = data{1,2};
+   maxdeg = data{1,3};
    
    % are velocities included in these snapshots as well?
-   readvel = data(1,5);
+   readvel = data{1,5};
    
    % number of lines in each snapshot
    if (readvel>0) 
@@ -21,10 +24,10 @@ function [fields,snaptimes,vels,CL ] = loadSnapshotFVM(filename)
    end
     
    nsnap = size(data,1)/snaplines;
-   
-   snaptimes = data(1:snaplines:end,4);   
+  %% 
+   snaptimes = data{1:snaplines:end,4};   
    if (readvel>0)
-        vels = data(2:snaplines:end,:);
+        vels = data{2:snaplines:end,:};
    else
        vels = NaN;
    end
@@ -37,7 +40,7 @@ function [fields,snaptimes,vels,CL ] = loadSnapshotFVM(filename)
        start = 1;
    end
    for fc = 1:nfield
-        fields(:,:,fc) = data(start+fc:snaplines:end,1:ncell);
+        fields(:,:,fc) = data{start+fc:snaplines:end,1:ncell};
    end
    
    % reorder dimensions as: cell, field, time
