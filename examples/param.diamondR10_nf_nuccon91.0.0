@@ -1,0 +1,75 @@
+# parameter file for calculating first passage times on a network
+ACTION rundynamics
+
+# set random number generator by system time
+RNGSEED -2
+
+# instant switching of random velocities
+VELCONTROL randvelswitch
+# no flows
+RUNSPEED 0D0
+#VERBOSE
+
+
+# network structure stored in this file
+NETWORKDIM 3
+NETFILE diamondR10_l1_sphere.net
+
+
+# file for outputting mesh structure
+MESHFILE *.mesh.txt
+
+# meshing parameters
+MESHSIZE 0.2D0 1
+
+# dynamics run parameters
+# how many steps to run
+NSTEP 4D6
+# timestep size
+DELT 1D-4
+# how often to dump snapshots and in what file
+SNAPSHOTS 1D4 *.snap.txt
+
+PRINTEVERY 5D3
+
+# start empty proteins uniformly distributed on network
+STARTEDGES -2
+# starting concentrations: 0mM free Ca, 2.71mM total buffer sites
+# External Ca = 0.5mM
+# this gives the final total calcium concentration (when filled to 100%) of 2.44mM
+# unit conversion to 1D: assume 0.05um tube radius
+# The two fields are (1) initial free Ca and (2) initial total buffer sites
+STARTCONC 0D0 0.0213D0
+
+# Equilibrium binding constant: 0.2016 mM
+KDEQUIL 0.0016D0
+
+DOBUFFER T
+FASTEQUIL T
+DORESERVOIRS T
+# reservoir: assume single sheet around sphere of radius 5um, height 60nm
+# Reservoir volume in units of length, actually V/(pi a^2)
+# Reservoir surface area in units of length, actually SA/(2*pi*a)
+# last number is the effective length for flux calculations
+# assume Anuc = 4*pi*(5um)^2
+# for a sheet: a^2/h*log(Rhat/a) where Rhat = sqrt(Anuc/pi)
+# length units are in um
+# old values, which assumed tubule radius 50nm
+RESVINFO 1 2.4D4 1.0D3 0.2208D0
+
+# external concentration (linear, conc*pi*a^2)
+# External concentration is 0.5mM
+# placeholder to set value of fixed nodes
+FIXNODE 1 1 0.003926990816987D0
+# get fixable nodes from network file
+FIXNODEFROMNETFILE T
+# fix only a subset of the fixable nodes (10 of them)
+FIXSUBSETNODES 40
+
+# diffusion coefficient for calcium and proteins. Round
+DCOEFF 30D0 3D0
+
+# no flux here, but this should make less outputting
+OUTPUTTOTFLUXONLY T
+UNIFORMBUFFER T
+OUTPUT1FIELD 1

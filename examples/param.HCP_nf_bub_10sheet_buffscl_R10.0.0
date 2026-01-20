@@ -1,0 +1,78 @@
+# parameter file for calculating refill on a network
+# this one is for a 3D network of l1_bubbles
+
+ACTION rundynamics
+# instant switching of random velocities
+VELCONTROL randvelswitch
+
+# set random number generator by system time
+RNGSEED -2
+
+# network structure stored in this file
+NETWORKDIM 3
+NETFILE HCPdeg6_bubblesRpt6_ellpt3.net
+
+# no flows
+RUNSPEED 0D0
+#VERBOSE
+
+
+# file for outputting mesh structure
+MESHFILE *.mesh.txt
+
+# meshing parametes
+MESHSIZE 0.1D0 1
+
+# dynamics run parameters
+# how many steps to run
+NSTEP 6D6
+# timestep size
+DELT 5D-5
+# how often to dump snapshots and in what file
+SNAPSHOTS 2D4 *.snap.txt
+
+PRINTEVERY 2D4
+
+# start empty proteins uniformly distributed on network
+STARTEDGES -2
+# starting concentrations: 80%*0.5mM free Ca, 2.7mM total buffer sites
+# this gives total calcium concentration (when filled to 100%) of 2.44mM
+# unit conversion to 1D: assum 0.01um tube radius
+# assume no change to buffer site concentration
+# even though bubbled network has more volume
+STARTCONC 0D0 0.000506874118280954D0
+
+# Equilibrium binding constant: 0.2 mM
+KDEQUIL 0.0002051568D0
+
+DOBUFFER T
+FASTEQUIL T
+DORESERVOIRS t
+# reservoir: assume single sheet around sphere of radius 5um, height 60nm
+# Reservoir volume in units of length, actually V/(pi a^2)
+# Reservoir SA in units of length, actually SA/(2*pi*a)
+# last number is the effective length for flux calculations
+# for a sheet: r^2/h*log(Rhat/r) where Rhat = sqrt(Anuc/pi)
+# for a sphere: pi*r/2 (does not depend on sphere rad)
+# length units are in um
+# 0 is the default for all the nonnuclear reservoirs
+RESVINFO 0 888.8888889D0 40D0  0.0282743338823081D0
+# 1 is the nuclear reservoir
+RESVINFO 1 185185.18518519D0   2777.77777778D0   0.0341278305160321D0
+
+# external concentration (linear, conc*pi*a^2)
+# placeholder to set value of fixed nodes
+FIXNODE 1 1 0.00050893800988154D0 1 0.000628318530717959D0
+# get fixable nodes from network file
+FIXNODEFROMNETFILE T
+# fix only a subset of the fixable nodes (10 of them)
+FIXSUBSETNODES 40
+
+# diffusion coefficient for calcium and proteins. Round
+#DCOEFF 27.55D0 2.755D0
+DCOEFF 30D0 3D0
+
+# no flux here, but this should make less outputting
+OUTPUTTOTFLUXONLY T
+UNIFORMBUFFER T
+OUTPUT1FIELD 1
