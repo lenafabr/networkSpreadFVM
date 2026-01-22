@@ -69,7 +69,7 @@ Each run will produce several output files, including:
 
 A MATLAB script is provided to parse and visualize the Ca²⁺ refill results:
 
-- **`examples/plot_Ca_Refill.m`**
+- **`scripts/plot_Ca_Refill.m`**
 
 This script:
 - Reads `*.snap.txt` and `*.mesh.txt` files
